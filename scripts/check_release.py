@@ -381,9 +381,10 @@ def check_stdlib_only(gate: Gate) -> None:
                  "cannot enumerate stdlib on this interpreter; skipped")
         return
     base_allowed = set(names) | {"legends_hetzner", "__future__"}
-    # QA tooling (gate + its tests) may use an optional TOML reader
-    # when present; the shipped runtime stays strict stdlib.
-    tooling_extra = {"tomli"}
+    # Tooling probes tomllib (stdlib since 3.11) and then optional tomli,
+    # catching ImportError and falling back to a bounded section parser.
+    # Neither is required on Python 3.10; runtime imports remain strict.
+    tooling_extra = {"tomli", "tomllib"}
     for path in stdlib_scope_files(gate.root):
         try:
             rel = path.relative_to(gate.root).as_posix()
