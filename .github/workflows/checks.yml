@@ -1,0 +1,65 @@
+name: checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ['3.10', '3.14']
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Release gate
+        run: python scripts/check_release.py --root .
+      - name: Test suite
+        run: python -m unittest discover -s tests -v
+      - name: Build wheel and sdist
+        run: |
+          python -m pip install build
+          python -m build
+      - name: Clean install outside checkout
+        shell: bash
+        run: python -m pip install dist/*.whl
+      - name: Resource integrity smoke
+        shell: bash
+        working-directory: ${{ runner.temp }}
+        run: |
+          set -e
+          legends-hetzner --version
+          python -m legends_hetzner --version
+          legends-hetzner resources > resources.json
+          python - <<'EOF'
+          import hashlib, json
+          from importlib.resources import files
+          info = json.load(open("resources.json"))
+          for key in ("recipe_exists", "pack_exists", "cloud_init_exists",
+                      "skills_cto_legends_exists"):
+              assert info.get(key) is True, key
+          assert info["source"] == "package_data", info["source"]
+          base = files("legends_hetzner._data") / "knowledge" / "hetzner"
+          pack = json.loads((base / "pack.json").read_text(encoding="utf-8"))
+          assert pack["schema"] == "legends.knowledge-pack/v1"
+          assert len(pack["files"]) == 15, len(pack["files"])
+          vault = base / "vault"
+          ok = 0
+          for item in pack["files"]:
+              target = (vault / item["path"]
+                        if (vault / item["path"]).is_file()
+                        else base / item["path"])
+              digest = hashlib.sha256(target.read_bytes()).hexdigest()
+              assert digest == item["sha256"], item["path"]
+              ok += 1
+          print(f"resource smoke OK: all exists, {ok}/15 pack hashes")
+          EOF

@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "legends-hetzner"
+version = "0.1.0"
+description = "Agent-operated Hetzner Cloud workflows with reviewed provisioning plans and an attachable knowledge library."
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{name = "Benjamin Samar / cto-legends"}]
+dependencies = []
+readme = "README.md"
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Operating System :: OS Independent",
+  "Topic :: System :: Systems Administration",
+]
+
+[project.scripts]
+legends-hetzner = "legends_hetzner.cli:main"
+
+[project.urls]
+Repository = "https://github.com/avalonreset/legends-hetzner"
+Issues = "https://github.com/avalonreset/legends-hetzner/issues"
+
+[tool.setuptools.packages.find]
+include = ["legends_hetzner*"]

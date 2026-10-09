@@ -1,0 +1,74 @@
+{
+  "schema": "legends.knowledge-pack/v1",
+  "id": "hetzner",
+  "module": "legends-hetzner",
+  "version": "0.1.0",
+  "entrypoint": "index.md",
+  "files": [
+    {
+      "path": "api-changes.md",
+      "sha256": "e418675ec314c1b35270c319471cecad4e9d7dfed6ceaf8cd59276401b45cd69"
+    },
+    {
+      "path": "auth-contexts.md",
+      "sha256": "8848dd547cc784d87948338e5c6d8ae0ae9bd6cd75d823fb120ee755754a9a36"
+    },
+    {
+      "path": "backups-restore.md",
+      "sha256": "17f36e02e840750d806739b7ceb07c21caa31a370087d3a87a404ba87a6204b0"
+    },
+    {
+      "path": "coolify-boundary.md",
+      "sha256": "731cc4c4df328055ed8c5f39d610a777c4aa4ff91c80161f842bf0313d5129f5"
+    },
+    {
+      "path": "index.md",
+      "sha256": "126fa5d6c217c968853764913c4f3a1fe48d0af01b0d6318ff59d3b7cb8cc2e8"
+    },
+    {
+      "path": "limitations.md",
+      "sha256": "85c86a60a7cfe9e397a8339d04aa4133c86a0c1631213396487896d39f391f73"
+    },
+    {
+      "path": "onboarding.md",
+      "sha256": "0e1a255926ccea07ad1533184c70b22f28c24f54e991586e59d47cbf4d2237d5"
+    },
+    {
+      "path": "preflight.md",
+      "sha256": "6d70d0392e92e6383e13a00daaefe0e14de8857c023f6b44aaef65668088f6d5"
+    },
+    {
+      "path": "sources.md",
+      "sha256": "0fce183b043ebf30b1e8989a1e5458dea30b33405374f02ac16b3a8c8fcf2156"
+    },
+    {
+      "path": "ssh-bootstrap.md",
+      "sha256": "79a64608a6e9d582d7a8cea65bebf0ca4631efd558c644e251a089ae517d8628"
+    },
+    {
+      "path": "templates/decision-log.md",
+      "sha256": "bd004d9f01b81e96b2e87b6490f2561f3d97466453b7d4ed4f4215fce15db2e9"
+    },
+    {
+      "path": "templates/preflight-checklist.md",
+      "sha256": "9c200f4faf315a58097c7cd4fd98b7edbeb62a3cc2e894e6e703c1d8f8890c0e"
+    },
+    {
+      "path": "templates/restore-proof.md",
+      "sha256": "e86964511a468e9370bfa0dd8baf52f6c5c0e93070224db359963e69d138f6fd"
+    },
+    {
+      "path": "templates/server-record.md",
+      "sha256": "4e33738eb9b65769390223467540506b5a4ed3aecb163580afdc61c905ab6393"
+    },
+    {
+      "path": "troubleshooting.md",
+      "sha256": "afa19cb70fe399f59ffde3058582a18234c22047f4c6fa1c88335ebf28d871cd"
+    }
+  ],
+  "ontology": {
+    "suggested_home": "wiki/library/legends-hetzner/hetzner",
+    "purpose": "Operate Hetzner Cloud servers through the official hcloud CLI with reviewed plans, read-only preflight, and source-cited runbooks.",
+    "kind": "library"
+  }
+}

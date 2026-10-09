@@ -1,0 +1,119 @@
+{
+  "contract_version": 4,
+  "tool": "legends-hetzner",
+  "version": "0.1.0",
+  "entries": [
+    "python -m legends_hetzner",
+    "legends-hetzner -> legends_hetzner.cli:main"
+  ],
+  "runtime": {
+    "language": "Python 3.10+ stdlib only",
+    "provider": "hcloud CLI as external upstream dependency (argv, shell=False, bounded timeout, location not datacenter)",
+    "hcloud_versions": ["1.61.0", "1.70.1"],
+    "license": "MIT for legends-hetzner sources; hcloud CLI remains upstream external dependency, not vendored"
+  },
+  "provision_support": "mocked-write-only until explicit disposable resource test",
+  "provision_note": "No paid/live server create validated in v0.1.0. server create live writes are implemented but untested against disposable resources; supported use is mocked writes, dry-run, and read-only preflight. Do not claim live provisioning support.",
+  "scope_limits": [
+    "Single CLI invocation per create; upstream hcloud HTTP retries (if any) are outside this wrapper and unaudited.",
+    "Custom endpoints unsupported: HCLOUD_ENDPOINT/HCLOUD_HOST/HCLOUD_DEBUG are stripped; upstream public defaults only.",
+    "No datacenter support: location only (datacenters removed Oct1; deprecated in hcloud 1.61.0).",
+    "DNS/load balancers/firewalls/volumes/networks out of scope for v0.1.0.",
+    "No paid/live write validated in v0.1.0."
+  ],
+  "auth": {
+    "token_env": "HCLOUD_TOKEN",
+    "context_flag": "--context NAME",
+    "rule": "Explicit HCLOUD_TOKEN xor hcloud named context. Both set is AUTH_AMBIGUOUS. Neither is AUTH_MISSING for live commands.",
+    "consistency": "Single auth selection per invocation; --context passed to every hcloud call when selected; HCLOUD_TOKEN removed from child env when context selected.",
+    "planned_binding": "server plan records global --context as planned_context (or null for token mode); preflight/create fail with PLAN_CONTEXT_MISMATCH when active selection differs.",
+    "env_safety": "Child env strips HCLOUD_ENDPOINT, HCLOUD_HOST, HCLOUD_DEBUG. Token never in argv, never printed, never persisted. Only known token value and credential-labeled values redacted; SHA256 plan/user-data digests stay printable."
+  },
+  "globals": [
+    {"flag": "--context", "metavar": "NAME", "help": "Use hcloud named context for every call; bound into plans at plan time and enforced at preflight/create."},
+    {"flag": "--timeout", "metavar": "SECS", "default": 30, "min": 1, "max": 120, "help": "Bounded per-call subprocess timeout (also guards readback; timeouts report uncertain_*)."},
+    {"flag": "--hcloud-bin", "metavar": "PATH", "default": "hcloud", "help": "hcloud executable path."},
+    {"flag": "--version", "help": "Print version and exit."}
+  ],
+  "commands": {
+    "doctor": {
+      "usage": "doctor [--live]",
+      "default": "offline (no auth; reads hcloud version only). Exit nonzero when hcloud missing, errored, or Python <3.10 (readiness gate).",
+      "live": "requires explicit auth; read-only probe via location list. Exit 5 on AUTH_MISSING, 1 when live_ok false, 0 only when live_ok true.",
+      "output": "JSON to stdout"
+    },
+    "inventory": {
+      "usage": "inventory",
+      "auth": "live read-only, requires explicit auth",
+      "output": "JSON {servers:[...], count:n} to stdout; malformed provider JSON is HCLOUD_BAD_JSON, never false empty"
+    },
+    "catalog": {
+      "usage": "catalog [--kind all|server-types|locations|images|ssh-keys]",
+      "auth": "live read-only, requires explicit auth",
+      "output": "JSON to stdout; malformed provider JSON is HCLOUD_BAD_JSON, never false empty"
+    },
+    "server plan": {
+      "usage": "server plan --name NAME --type TYPE --location LOC --image IMG --ssh-key KEY [--ssh-key KEY...] [--user-data FILE] [--label k=v ...] --out FILE",
+      "auth": "offline (no auth needed); global --context if given is recorded as planned_context",
+      "rules": ["SSH key required (at least one; names or numeric IDs)", "location accepts name or numeric ID", "refuses to overwrite existing --out", "user-data optional, <=32768 bytes, must start with #cloud-config or #!/", "emits immutable plan file {plan:{...planned_context...}, plan_hash:sha256:...} with timezone-aware created_at"],
+      "output": "JSON {ok:true, plan_hash, out, planned_context} to stdout"
+    },
+    "server preflight": {
+      "usage": "server preflight --plan FILE [--max-plan-age-hours H]",
+      "auth": "live read-only, requires explicit auth; enforces planned_context then checks name/type/location/image/keys plus support/arch/deprecation/availability",
+      "checks": ["name_available", "server_type_exists", "location_exists", "image_exists", "ssh_keys_exist", "location_supported", "location_available", "location_not_deprecated", "image_not_deprecated", "arch_compatible"],
+      "schema": "Observed hcloud server_type.locations[] entries carry id,name,deprecation, with available/recommended added in newer versions. The adapter also tolerates a string location selector field. Image deprecation replaces the legacy deprecated boolean; datacenter endpoints were removed October 1, 2026.",
+      "strictness": "All five list probes must return JSON arrays or the run fails HCLOUD_BAD_JSON (no false pass). Missing type locations[] or missing type/image architecture blocks. Duplicate image names resolve by type architecture; exact numeric image IDs pin and may fail incompatible.",
+      "capacity": "available=true is capacity indication, not guarantee; available=false means no capacity and blocks; missing available (hcloud 1.61) is labeled unknown, not true.",
+      "output": "JSON {passed, checks:[...], failures:[...]}; exit 3 when passed=false",
+      "writes": "none"
+    },
+    "server create": {
+      "usage": "server create --plan FILE --plan-hash sha256:... --approve [--dry-run] [--receipt FILE] [--max-plan-age-hours H]",
+      "auth": "live, requires explicit auth; enforces planned_context",
+      "rules": [
+        "Requires --approve plus nonempty formatted --plan-hash (sha256:<64 hex>) matching embedded plan_hash. Empty/malformed/None never bypasses (None legal only for offline preflight load).",
+        "Verifies plan_hash, planned_context, user-data digest, SSH keys, timezone-aware created_at, finite positive max age (default 24h). Tampered/stale/mismatched plans abort with no write.",
+        "Validates --receipt writable before any cloud write; refuses to overwrite.",
+        "Live preflight (existence plus location support, availability, deprecation, arch compat) must pass or abort with no write.",
+        "--dry-run runs preflight only and makes no writes.",
+        "One CLI invocation only; no client-side retry of server create (upstream HTTP retries unaudited).",
+        "user-data sent from a private 0600 temp snapshot of reviewed bytes with digest re-verified (no TOCTOU).",
+        "Readback contract: success confirmation requires describe id AND name match plus plan type/location/image comparison (direct and nested shapes validated; invalid shapes stay unknown). Timeouts report uncertain_* via readback, never failed; CLI failure with existing resource reports uncertain_exists; inconclusive readback reports uncertain_unknown; never false success or false no-resource.",
+        "Receipt (if --receipt) is redacted JSON with plan_hash and digest only, no token, no user-data content; digests stay printable."
+      ],
+      "output": "Receipt JSON to stdout; optional receipt file (refuses to overwrite)."
+    },
+    "resources": {
+      "usage": "resources",
+      "auth": "offline (no auth needed)",
+      "resolves": "Installed legends_hetzner/_data/ adjacent to the package first (ordinary pip wheels), else checkout root proven by module-specific markers (docs/CLI-CONTRACT.json, AGENTS marker, matching pyproject, or recipe+pack pair); bare docs//knowledge/ never counts.",
+      "output": "JSON {version, root, recipe, recipe_exists, pack_dir, pack_exists, pack_files[], cloud_init_dir, skills_cto_legends, source} with absolute paths"
+    }
+  },
+  "exit_codes": {
+    "0": "success (including dry-run with passing preflight; doctor only when checks pass / live_ok true)",
+    "1": "general provider/adapter failure, sanitized (HCLOUD_EXIT, HCLOUD_BAD_JSON, TIMEOUT, HCLOUD_NOT_FOUND, HCLOUD_OS_ERROR, HCLOUD_DECODE_ERROR); also offline doctor with missing/errored hcloud",
+    "2": "usage/validation/plan/auth-ambiguous (including PLAN_TAMPERED, PLAN_STALE, PLAN_HASH_MISMATCH, PLAN_CONTEXT_MISMATCH, NEED_APPROVAL, AUTH_AMBIGUOUS, RECEIPT_PATH_INVALID)",
+    "3": "preflight blocked (no write attempted)",
+    "4": "create failed or uncertain (see receipt status failed|uncertain_*)",
+    "5": "auth missing for live command (including doctor --live)"
+  },
+  "plan_file": {
+    "shape": "{plan:{version:1, tool, name, server_type, location, image, ssh_keys[], planned_context|null, user_data|null, user_data_sha256|null, labels{}, created_at, tool_version}, plan_hash:sha256:...}",
+    "hash": "sha256 of canonical JSON (sort_keys, separators) of plan payload, prefixed sha256:",
+    "created_at": "must be timezone-aware ISO-8601; naive values rejected (no TypeError crash)",
+    "max_age": "must be finite and positive; NaN/inf/zero/negative/non-numeric rejected",
+    "user_data_digest": "sha256:<hex> of UTF-8 user-data bytes; verified on load and re-verified on private snapshot at create"
+  },
+  "receipt": {
+    "shape": "{tool, version, created_at, plan_hash, plan_name, status, dry_run, preflight, server, error, readback, auth_source, provision_support}",
+    "status_values": ["blocked", "dry_run", "created", "failed", "uncertain_exists", "uncertain_missing", "uncertain_unknown"],
+    "redaction": "Known HCLOUD_TOKEN value, Authorization/Bearer credentials, JSON/quoted token|secret|api-key assignments, and sensitive-keyed dict values redacted; plan_hash and user-data digests stay printable; no user-data content; errors truncated to 2000 chars."
+  },
+  "packaging_data": {
+    "wheel_dir": "legends_hetzner/_data/",
+    "includes": ["docs/", "knowledge/", "cloud-init/ (if any)", "skills/cto-legends (vendored)"],
+    "note": "Lead owns setuptools wiring. Runtime resolves adjacent _data first, then marker-proven checkout root."
+  }
+}

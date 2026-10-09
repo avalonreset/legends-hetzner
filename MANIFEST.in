@@ -1,0 +1,10 @@
+include LICENSE README.md AGENTS.md SECURITY.md CHANGELOG.md THIRD_PARTY_NOTICES.md CONTRIBUTING.md SUPPORT.md
+recursive-include docs *.md *.json
+recursive-include knowledge *.md *.json
+recursive-include cloud-init *.yaml
+recursive-include skills *.md
+recursive-include scripts *.py
+recursive-include tests *.py
+recursive-include assets *.png *.webp *.json
+recursive-include .github *.yml
+global-exclude __pycache__ *.py[cod] .env *.pem *.key

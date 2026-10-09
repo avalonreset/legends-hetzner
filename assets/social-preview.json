@@ -1,0 +1,40 @@
+{
+  "template": "legends-social-v1",
+  "title": "legends-hetzner",
+  "subtitle": "agent-operated hetzner cloud workflows with reviewed plans and a reusable knowledge vault",
+  "size": [
+    1280,
+    640
+  ],
+  "title_px": 64,
+  "subtitle_px": 36,
+  "safe_margin_px": 80,
+  "lines": [
+    "agent-operated hetzner cloud workflows with",
+    "reviewed plans and a reusable knowledge vault"
+  ],
+  "text_bounds": [
+    [
+      80,
+      176,
+      680,
+      238
+    ],
+    [
+      80,
+      324,
+      1026,
+      362
+    ],
+    [
+      80,
+      372,
+      1070,
+      410
+    ]
+  ],
+  "font_sha256": "3769f0f76477a7d9e2e6cb40422dedacb56c9ab1a6f7beee89b2b9ba6b8091ee",
+  "image_sha256": "950e61323433b3809f1f1ce1f0a1532003d19d4a1e70bd7ac8dc8bff29056dbd",
+  "bytes": 24658,
+  "upload_status": "not_attempted"
+}

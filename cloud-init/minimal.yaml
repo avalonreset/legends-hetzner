@@ -1,0 +1,7 @@
+#cloud-config
+# Optional example for a compatible Linux image. Select an existing public
+# SSH key in the server plan; do not paste private keys or tokens here.
+# Verify the image's cloud-init support before selecting this file.
+ssh_pwauth: false
+timezone: UTC
+final_message: "Initial cloud-init finished after $UPTIME seconds. Verify SSH and service health separately."
