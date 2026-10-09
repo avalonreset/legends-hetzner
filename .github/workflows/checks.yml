@@ -87,7 +87,7 @@ jobs:
         with:
           repository: avalonreset/legends-empire
           # Immutable legends-empire 0.3.1 transaction engine.
-          ref: 148650c858b677c4afe7f9dea25922803b211628
+          ref: dac252a647cbe8b42285317fe096e20afaf2fbe9
           path: .integration/empire
       - name: Attach packaged knowledge on the native OS
         shell: bash
