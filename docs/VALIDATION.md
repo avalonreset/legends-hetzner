@@ -3,6 +3,29 @@
 Observed 2026-10-09. These results describe tested behavior, not a guarantee
 for every provider account, OS release or future API response.
 
+## Platform and package checks
+
+The 148-test suite passed on native Windows. Hosted CI passed all six
+Windows, macOS and Ubuntu jobs on Python 3.10 and 3.14, including the
+release scan, tests, wheel/source builds, wheel installation outside the
+checkout, resource discovery and all 15 knowledge-file hashes.
+See the [verified matrix run](https://github.com/avalonreset/legends-hetzner/actions/runs/37949067541).
+
+Separate native fleet checks exercised an isolated wheel installation:
+
+| Platform | Python | Official CLI | Result |
+| --- | --- | --- | --- |
+| Windows x64 | 3.11.7 | 1.70.1 | Installed command, offline doctor, packaged resources and pack hashes passed. |
+| Debian 13 x64 | 3.13.5 | 1.70.1 | Installed command, offline doctor, offline plan, missing-auth refusal, resources and pack hashes passed. |
+| macOS 26.6.2 arm64 | 3.13.7 | 1.70.1 | Installed command, offline doctor, offline plan, missing-auth refusal, resources and pack hashes passed. |
+
+Native platform checks used separately staged official CLI binaries and
+isolated Python environments. Provider credentials were not copied to the
+macOS or Linux test environments. Their readiness checks were offline;
+authenticated provider checks below were performed on Windows.
+The macOS system Python 3.9 was deliberately not used because it is below
+the package's declared Python 3.10 minimum.
+
 ## Provider behavior
 
 Windows with Python 3.11.7 and official `hcloud` 1.61.0 and 1.70.1 passed offline
