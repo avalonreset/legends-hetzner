@@ -1,6 +1,6 @@
 # Source ledger
 
-Concise record of the sources behind the v0.1.0 public docs and knowledge
+Concise record of the sources behind the v0.1.1 public docs and knowledge
 pack. All web sources were observed on 2026-10-09 unless noted. Official
 Hetzner sources are authoritative; community sources are labeled as such and
 are never the basis for a behavioral guarantee.

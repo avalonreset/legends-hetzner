@@ -63,3 +63,48 @@ jobs:
               ok += 1
           print(f"resource smoke OK: all exists, {ok}/15 pack hashes")
           EOF
+
+  empire-attachment:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Build and install Hetzner wheel
+        shell: bash
+        run: |
+          set -e
+          python -m pip install build
+          python -m build --wheel
+          python -m pip install dist/*.whl
+      - name: Check out pinned Empire engine
+        uses: actions/checkout@v4
+        with:
+          repository: avalonreset/legends-empire
+          # Immutable legends-empire 0.3.1 transaction engine.
+          ref: 148650c858b677c4afe7f9dea25922803b211628
+          path: .integration/empire
+      - name: Attach packaged knowledge on the native OS
+        shell: bash
+        working-directory: ${{ runner.temp }}
+        run: |
+          set -e
+          python - <<'EOF'
+          import os, subprocess, sys
+          from pathlib import Path
+          from legends_hetzner.resources import resolve
+          info = resolve()
+          assert info["source"] == "package_data", info["source"]
+          workspace = Path(os.environ["GITHUB_WORKSPACE"])
+          subprocess.run([
+              sys.executable,
+              str(workspace / "scripts" / "verify_knowledge_attachment.py"),
+              "--empire-source", str(workspace / ".integration" / "empire"),
+              "--pack", str(Path(info["pack_dir"]) / "hetzner" / "pack.json"),
+          ], check=True)
+          EOF

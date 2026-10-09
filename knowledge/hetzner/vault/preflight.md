@@ -17,8 +17,9 @@ in the installed module.
    internal retries). Uncertain outcomes exit nonzero with
    `uncertain_*`; never false success.
 
-v0.1.0 supported use stops at step 3 plus mocked writes; live create is
-implemented but has no validated disposable-resource test.
+The live path has a validated disposable Windows-client canary to an
+Ubuntu 24.04 server: create/readback, SSH, cloud-init and cleanup.
+See the installed module's `docs/VALIDATION.md` for the bounded evidence.
 
 ## Plan rules
 

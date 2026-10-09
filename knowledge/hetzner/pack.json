@@ -2,7 +2,7 @@
   "schema": "legends.knowledge-pack/v1",
   "id": "hetzner",
   "module": "legends-hetzner",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "entrypoint": "index.md",
   "files": [
     {
@@ -15,7 +15,7 @@
     },
     {
       "path": "backups-restore.md",
-      "sha256": "17f36e02e840750d806739b7ceb07c21caa31a370087d3a87a404ba87a6204b0"
+      "sha256": "a8ddd414d929ef05dc1f770e80192506ff779453ea974136e51180da81718bab"
     },
     {
       "path": "coolify-boundary.md",
@@ -23,19 +23,19 @@
     },
     {
       "path": "index.md",
-      "sha256": "126fa5d6c217c968853764913c4f3a1fe48d0af01b0d6318ff59d3b7cb8cc2e8"
+      "sha256": "c95e6290b0d736a03d0a2c4b223166d22f6a460d4b50222dafbd57518c097a5a"
     },
     {
       "path": "limitations.md",
-      "sha256": "85c86a60a7cfe9e397a8339d04aa4133c86a0c1631213396487896d39f391f73"
+      "sha256": "417bf154cce77f197785c0c356c7371de4eae4b02e6ac56cec8644013dc17b7c"
     },
     {
       "path": "onboarding.md",
-      "sha256": "f6e0ec2319f1571a57f00901b25b2a3e86a4ec441aa491fd807e30de78d6ff3c"
+      "sha256": "be61871749fd7946ffba404f1291f7c859eb0c3c0ec37b052d4044389db5f52b"
     },
     {
       "path": "preflight.md",
-      "sha256": "a483120804006202f83d8c46bdf8efe4cab44b5b5aa2836545d2c9377a1fe1a1"
+      "sha256": "2c135c0ec33d39cbff8fbde945c8c50e8ec4690042de6909178175b8f527969c"
     },
     {
       "path": "sources.md",
@@ -43,7 +43,7 @@
     },
     {
       "path": "ssh-bootstrap.md",
-      "sha256": "82750ecc41a3ec877f9a27e622976048f4734a549cfe33acefa05e57f8f65bbe"
+      "sha256": "a97be4ab383abc8a009c96a563f8cf44325b295e656a4dbd9ab0ce98211f5759"
     },
     {
       "path": "templates/decision-log.md",

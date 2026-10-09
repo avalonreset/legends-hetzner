@@ -1,6 +1,6 @@
 # `legends-hetzner` agent recipe (canonical)
 
-Module `legends-hetzner` v0.1.0. Agent-operated Hetzner Cloud workflows that
+Module `legends-hetzner` v0.1.1. Agent-operated Hetzner Cloud workflows that
 wrap the official `hcloud` CLI with reviewed plans, read-only preflight, and
 a source-cited reference library.
 
@@ -11,7 +11,7 @@ No MCP server is required; see `docs/LIMITATIONS.md` for the MCP finding.
 Read first, in order:
 
 1. `docs/CLI-CONTRACT.json` (exact CLI syntax, source of truth)
-2. `docs/LIMITATIONS.md` (what v0.1.0 does not do)
+2. `docs/LIMITATIONS.md` (what v0.1.1 does not do)
 3. `docs/SOURCES.md` (source ledger with dates and URLs)
 4. The runbook for the task at hand (list below)
 
@@ -22,10 +22,10 @@ Read first, in order:
 - Provider calls go to the external `hcloud` executable via argv with
   `shell=False` and a bounded timeout. `hcloud` is an upstream prerequisite,
   never vendored.
-- Provision support in v0.1.0 is mocked-write-only. Live `server create` is
-  implemented but has no validated disposable-resource test. Supported use is
-  mocked writes, `--dry-run`, and read-only preflight. Do not claim live
-  provisioning support.
+- Live `server create` has a validated disposable canary from a Windows
+  client to an Ubuntu 24.04 server, including readback, SSH, cloud-init and
+  cleanup. This does not prove every OS/image/location combination or
+  application health. See `docs/VALIDATION.md` and `docs/LIVE-CANARY.md`.
 
 ## Authentication rule (contract v4)
 
@@ -85,7 +85,7 @@ contract file wins. Never invent wrapper flags.
    and cannot be injected into existing servers by Hetzner. Verify access and
    cloud-init completion before declaring success.
 5. Backups and restore: `docs/BACKUPS.md`. The wrapper has no backup or
-   snapshot commands in v0.1.0; use the Console, the API, or `hcloud`
+   snapshot commands in v0.1.1; use the Console, the API, or `hcloud`
    directly, and prove restores with a rehearsal, not with backup existence.
 6. Knowledge: `docs/KNOWLEDGE-PACK.md`. The attachable pack is
    `knowledge/hetzner/pack.json` (schema `legends.knowledge-pack/v1`).
@@ -99,6 +99,7 @@ contract file wins. Never invent wrapper flags.
 - `docs/SSH-BOOTSTRAP.md`: SSH keys, cloud-init specifics, rebuild access,
   bootstrap verification.
 - `docs/PREFLIGHT.md`: plans, live preflight, image and type availability.
+- `docs/LIVE-CANARY.md`: bounded provisioning, bootstrap and cleanup rehearsal.
 - `docs/BACKUPS.md`: backups vs snapshots, rebuild semantics, restore proof.
 - `docs/COOLIFY-BOUNDARY.md`: optional Coolify app ownership boundary.
 - `docs/TROUBLESHOOTING.md`: auth, SSH, plans, API changes, rescue, support.
@@ -109,8 +110,8 @@ contract file wins. Never invent wrapper flags.
 
 ## Evidence rules
 
-- Keep Windows, macOS, and Linux evidence distinct. Keep live reads, mocked
-  writes, and untested claims distinct.
+- Keep Windows, macOS, and Linux evidence distinct. Keep live reads, live
+  canaries, mocked writes, and untested claims distinct.
 - Save receipts, plans, and user configuration outside installed sources.
 - Never record tokens, private inventories, server addresses from private
   estates, or customer data in the repository or the knowledge pack.

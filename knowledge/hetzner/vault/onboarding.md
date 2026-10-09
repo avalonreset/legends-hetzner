@@ -7,7 +7,7 @@ Source: official setup tutorial
 ## Install `hcloud`
 
 Research-time latest was v1.70.1 (published 2026-10-06). QA for module
-v0.1.0 should use v1.70.1 unless the releases page shows newer. Manual
+v0.1.1 should use v1.70.1 unless the releases page shows newer. Manual
 installs do not auto-update.
 
 - Windows: `winget install HetznerCloud.CLI` or `scoop install hcloud`

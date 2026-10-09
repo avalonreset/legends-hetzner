@@ -57,7 +57,7 @@ For standalone use, install the wheel from the
 a virtual environment, or install the tagged source:
 
 ```console
-python -m pip install "git+https://github.com/avalonreset/legends-hetzner.git@v0.1.0"
+python -m pip install "git+https://github.com/avalonreset/legends-hetzner.git@v0.1.1"
 legends-hetzner doctor
 legends-hetzner resources
 ```
@@ -96,11 +96,12 @@ printed hash, then check the proposed create without making the purchase:
 legends-hetzner --context my-project server create --plan ./server-plan.json --plan-hash sha256:REVIEWED_HASH --approve --dry-run
 ```
 
-Removing `--dry-run` requests a paid creation. Live creation is an experimental
-path in 0.1.0: mocked mutation tests do not establish that a real server has
-been provisioned successfully. Check the release's validation record before
-choosing that path. A running VM does not establish SSH access, successful
-cloud-init, or application health.
+Removing `--dry-run` requests a paid creation. A disposable live canary has
+verified creation, readback, key-based SSH, cloud-init and resource cleanup
+from Windows against an Ubuntu 24.04 server. See the [tested scope](docs/VALIDATION.md)
+and [repeatable canary procedure](docs/LIVE-CANARY.md). Verify SSH and bootstrap
+for each new server; this evidence does not establish application health or
+every client, image and location combination.
 
 Keep plans, receipts and inventories in a private working directory outside
 the installed module. Do not put secrets in cloud-init data.
@@ -117,10 +118,12 @@ it creates a user-owned index and versioned reference snapshot. Updates
 preserve that index and refuse to overwrite locally edited references.
 Private infrastructure decisions and evidence stay in your chosen project.
 
-The current Empire transaction engine supports native Windows attachment
-previews; applying requires a supported POSIX environment, such as Linux,
-macOS, or correctly configured WSL. This is distinct from the cross-platform
-Hetzner runtime. See the module recipe for exact attachment instructions.
+Use Empire 0.3.1+ with Python 3.11+ for native Windows attachment on a
+local NTFS vault. macOS, Linux and correctly configured WSL use the POSIX
+backend. Unsupported filesystem or security conditions fail before mutation;
+network shares, synced folders and reparse paths are outside the native
+Windows support scope. See the [attachment instructions](docs/KNOWLEDGE-PACK.md)
+and [validation record](docs/VALIDATION.md).
 
 ## Coolify and MCP
 

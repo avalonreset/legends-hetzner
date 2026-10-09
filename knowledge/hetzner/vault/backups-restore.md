@@ -16,7 +16,7 @@ and `https://docs.hetzner.com/cloud/servers/faq/`, observed 2026-10-09.
 
 ## Wrapper scope
 
-v0.1.0 has no backup, snapshot, rebuild, or restore commands. Use the
+v0.1.1 has no backup, snapshot, rebuild, or restore commands. Use the
 Console, API, or `hcloud` directly (confirm flags with `--help`).
 
 ## Restore proof

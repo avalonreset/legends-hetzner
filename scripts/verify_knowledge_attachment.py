@@ -1,13 +1,15 @@
 """Exercise this pack against an installed Empire source in a temporary vault.
 
 This is optional integration acceptance, not part of installation. It never
-selects or changes a user's vault. Run on POSIX with persistent file permissions.
+selects or changes a user's vault. Native Windows requires Empire 0.3.1+;
+the selected engine must support secure local filesystem transactions.
 """
 import argparse
 import hashlib
 import json
 import os
 from pathlib import Path
+import platform
 import shutil
 import sys
 import tempfile
@@ -18,11 +20,17 @@ def main():
     parser.add_argument("--empire-source", type=Path, required=True)
     parser.add_argument("--pack", type=Path, required=True)
     args = parser.parse_args()
-    if os.name == "nt":
-        parser.error("Empire attachment apply requires POSIX; use WSL, Linux or macOS.")
     sys.path.insert(0, str(args.empire_source.resolve()))
+    from claude_empire import __version__ as empire_version
     from claude_empire.knowledge import attachment_bundle, load_pack
     from claude_empire.transaction import TransactionError, apply_bundle, inspect_bundle
+    if os.name == "nt":
+        try:
+            version = tuple(int(part) for part in empire_version.split(".")[:3])
+        except ValueError:
+            parser.error("Cannot verify Empire version; native Windows requires 0.3.1+.")
+        if version < (0, 3, 1):
+            parser.error("Native Windows attachment requires Empire 0.3.1+; upgrade the engine.")
 
     with tempfile.TemporaryDirectory(prefix="legends-hetzner-pack-") as temporary:
         root = Path(temporary).resolve()
@@ -63,7 +71,9 @@ def main():
         changed.write_text(changed.read_text(encoding="utf-8") + "\nSynthetic update.\n",
                            encoding="utf-8")
         updated = json.loads(pack.read_text(encoding="utf-8"))
-        updated["version"] = "0.1.1"
+        version = [int(part) for part in original["version"].split(".")]
+        version[-1] += 1
+        updated["version"] = ".".join(str(part) for part in version)
         for item in updated["files"]:
             item["sha256"] = hashlib.sha256(
                 (source / "vault" / item["path"]).read_bytes()).hexdigest()
@@ -84,7 +94,9 @@ def main():
             raise AssertionError("Edited reference was accepted for overwrite.")
         assert snapshot == {str(p.relative_to(vault)): p.read_bytes()
                             for p in vault.rglob("*") if p.is_file()}
-        print(json.dumps({"ok": True, "checks": checks, "scope": "synthetic vault only"},
+        print(json.dumps({"ok": True, "checks": checks, "scope": "synthetic vault only",
+                          "platform": platform.system(), "python": platform.python_version(),
+                          "empire_version": empire_version, "pack_version": original["version"]},
                          indent=2))
     return 0
 

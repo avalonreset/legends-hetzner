@@ -24,7 +24,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-TOOL_VERSION = "0.1.0"
+TOOL_VERSION = "0.1.1"
 FAIL = "FAIL"
 WARN = "WARN"
 MAX_PER_CODE_PATH = 10

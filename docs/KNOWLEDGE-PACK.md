@@ -9,7 +9,7 @@ reference shelf, not a vault and not a skill.
 - Schema: `legends.knowledge-pack/v1`
 - Id: `hetzner`
 - Module: `legends-hetzner`
-- Version: `0.1.0`
+- Version: `0.1.1`
 - Entrypoint: `index.md`
 - Suggested home: `wiki/library/legends-hetzner/hetzner`
 - Ontology kind: `library`
@@ -38,7 +38,7 @@ installation.
 Use the pack from the installed module. Resolve its path through the
 router (`cto-legends handoff legends-hetzner`) and read the installed
 recipe; paths below are the documented shape from the Empire
-knowledge-packs doc (`legends-empire` 0.3.0, ledger source 34), so confirm
+knowledge-packs doc (ledger source 34), so confirm
 the exact engine command against the installed Empire version before use.
 
 Preview with an explicit vault, operation id, and timestamp:
@@ -55,11 +55,19 @@ binds the reviewed changes; it is not an independent approval policy.
 `--destination wiki/library/my-chosen-shelf` selects another location under
 `wiki/library/`.
 
-Platform rule: native Windows supports preview. Applying uses the existing
-recoverable transaction engine and requires WSL or a supported POSIX host
-with persistent POSIX file permissions; Windows drives mounted in WSL need
-DrvFS metadata enabled. Preview and apply in the same environment. There is
-no alternate direct-write installer.
+Use `legends-empire` 0.3.1+ and Python 3.11+ for native Windows preview and
+apply. The Windows backend supports local NTFS with stable file identities,
+current-user-owned files and restorable security descriptors. It binds ACL
+state into the reviewed plan and rejects unsafe path or permission changes.
+Network/UNC shares, synced folders, reparse paths and unsupported security
+layouts are outside this support scope. A readiness refusal is not a reason
+to weaken ACLs or bypass the transaction engine.
+
+macOS, Linux and correctly configured WSL use the POSIX backend with
+persistent file permissions. Mounted Windows drives in WSL require DrvFS
+metadata. Preview and apply in the same environment. Windows supports
+process-crash recovery; it does not claim POSIX directory `fsync` or
+equivalent power-loss durability. There is no alternate direct-write installer.
 
 After a module update, run the same attach command with a new operation id
 and the new pack. An unchanged pack returns `noop`. The module version and
@@ -95,10 +103,10 @@ paths, or secrets:
 Pack admission checks: manifest integrity (hashes match bytes), package
 inclusion, fresh attachment, repeat attachment, upstream update, locally
 edited reference conflict (must fail before partial mutation), and
-natural-language discovery through the router. The attachment integration
-was run against Empire 0.3.0 in a WSL POSIX temporary vault and all five
-scenarios passed (preview without writes, fresh attach, repeat-attach
-noop, update preserving user content, local-edit conflict); the measured
-record is in `docs/VALIDATION.md`, reproducible with
-`scripts/verify_knowledge_attachment.py`. Attachment behavior here is
-documented from the Empire engine doc (ledger source 34).
+natural-language discovery through the router. The measured record is in
+`docs/VALIDATION.md`, reproducible with `scripts/verify_knowledge_attachment.py`.
+The script uses a temporary synthetic vault and checks preview without
+writes, fresh attach, repeat-attach noop, update preserving user content
+and local-edit conflict. It refuses native Windows with Empire older than
+0.3.1. CI exercises the installed wheel's pack against an immutable pinned
+Empire engine on Windows, macOS and Linux.

@@ -55,3 +55,10 @@ Plan accepted keys; preflight passed; dry-run passed; live create (only
 with explicit authorization) returned `created`; SSH with the expected
 key works; cloud-init completed on the host; Console fallback is written
 in the private server record (`templates/server-record.md`).
+
+Use an isolated known-hosts file for disposable servers. Prefer independent
+host fingerprint verification; `accept-new` is trust on first use and must
+be recorded as such. The installed module's `docs/LIVE-CANARY.md` covers a
+bounded create, bootstrap and identity-checked cleanup rehearsal. Its
+observed Windows-client canary passed; it is not evidence for every image
+or for application health.

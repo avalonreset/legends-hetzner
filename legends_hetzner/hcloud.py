@@ -23,7 +23,7 @@ MAX_TIMEOUT = 120
 ERROR_SNIPPET_MAX = 2000
 TOKEN_ENV = "HCLOUD_TOKEN"
 # Overrides stripped from the child env: custom endpoints could divert the
-# token; debug flags could log it. v0.1.0 supports upstream defaults only.
+# token; debug flags could log it. v0.1.1 supports upstream defaults only.
 STRIPPED_CHILD_ENV = ("HCLOUD_ENDPOINT", "HCLOUD_HOST", "HCLOUD_DEBUG")
 
 # Redact only the known token value and credential-labeled values. Never a

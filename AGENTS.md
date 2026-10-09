@@ -20,4 +20,4 @@ Only `cto-legends` is a registered skill. Module instructions belong in
 Public identity: legends-hetzner. The earlier private kit is a separate
 compatibility surface, not a dependency.
 Keep runtime evidence and user configuration outside installed sources.
-Keep Windows, macOS, Linux, live read, mocked write, and untested evidence distinct.
+Keep Windows, macOS, Linux, live read, live canary, mocked write, and untested evidence distinct.

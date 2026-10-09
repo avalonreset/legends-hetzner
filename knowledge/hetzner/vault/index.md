@@ -1,6 +1,6 @@
 # Hetzner Cloud reference shelf
 
-Attached reference for module `legends-hetzner` v0.1.0. This shelf holds
+Attached reference for module `legends-hetzner` v0.1.1. This shelf holds
 generic, source-cited runbooks for agent-operated Hetzner Cloud work with
 the official `hcloud` CLI. It carries no private inventories, credentials,
 addresses, or customer data.

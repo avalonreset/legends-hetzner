@@ -1,16 +1,17 @@
 # Honest limitations
 
-What v0.1.0 does not do, what is untested, and where to check instead.
+What v0.1.1 does not do, what is untested, and where to check instead.
 
 ## Provisioning
 
-- Provision support is mocked-write-only. Live `server create` is
-  implemented but has no validated test against disposable resources. Do not
-  claim live provisioning works until a reviewed canary (create, readback,
-  cleanup) proves it.
+- Live provisioning has a validated disposable Windows-client canary:
+  create/readback, SSH, cloud-init and cleanup of an Ubuntu 24.04 server.
+  This does not validate live writes from macOS/Linux clients, every
+  image/type/location combination, application health, or backup restores.
+  See `docs/VALIDATION.md`.
 - The wrapper has no commands for backups, snapshots, rebuilds, rescue,
   firewalls, networks, load balancers, DNS, volumes, images, or SSH key
-  management in v0.1.0. Those operations stay on their official surfaces:
+  management in v0.1.1. Those operations stay on their official surfaces:
   Console, API, or `hcloud` directly.
 
 ## Evidence status
@@ -55,10 +56,15 @@ What v0.1.0 does not do, what is untested, and where to check instead.
 
 - Attaching the knowledge pack needs the existing Empire transaction
   engine from `legends-empire`; it is not reimplemented here.
-- Native Windows supports preview. Applying a pack needs WSL or a POSIX
-  host with persistent permissions (DrvFS metadata on mounted Windows
-  drives). Preview and apply in the same environment. There is no
-  direct-write installer.
+- Native Windows attachment requires Empire 0.3.1+, Python 3.11+ and a
+  supported local NTFS vault with stable file identities and restorable
+  current-user security descriptors. Network shares, synced folders,
+  reparse paths and unsupported security layouts are refused or outside
+  the supported scope. See `docs/KNOWLEDGE-PACK.md`.
+- macOS, Linux and WSL use persistent POSIX permissions; mounted Windows
+  drives under WSL require DrvFS metadata. Preview and apply in the same
+  environment. Windows process-crash recovery is supported; equivalent
+  power-loss durability is not claimed. There is no direct-write installer.
 - Pack hashes prove content identity, not truth. Imported Markdown stays
   reference material under the owner instructions.
 

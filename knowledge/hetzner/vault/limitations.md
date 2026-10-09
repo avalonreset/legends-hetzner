@@ -1,8 +1,9 @@
 # Limitations
 
-- Provisioning is mocked-write-only in v0.1.0. Live `server create` is
-  implemented but untested against disposable resources. Do not claim live
-  provisioning works.
+- Live provisioning has a validated disposable Windows-client canary:
+  Ubuntu 24.04 server creation/readback, SSH, cloud-init and cleanup.
+  This does not validate live writes from macOS/Linux clients, every
+  image/type/location combination, application health, or backup restores.
 - No wrapper commands for backups, snapshots, rebuilds, rescue,
   firewalls, networks, load balancers, DNS, volumes, images, or SSH key
   management. Use official surfaces directly.
@@ -18,9 +19,13 @@
 - Server Metadata is official with documented `/hetzner/v1/*` routes;
   EC2-compatible routes were removed 2026-08-01. Metadata serves user
   data back, so user data is a bootstrap channel, not a secret store.
-- Pack attach: native Windows supports preview; apply needs WSL or POSIX
-  with persistent permissions. No direct-write installer. Pack hashes
-  prove content identity, not truth.
+- Pack attach: native Windows requires Empire 0.3.1+, Python 3.11+ and a
+  supported local NTFS vault with stable file identities and restorable
+  current-user ACLs. No network shares, synced folders or reparse paths.
+  macOS/Linux/WSL use persistent POSIX permissions. Preview and apply in
+  the same environment. Windows process-crash recovery does not imply
+  power-loss durability. No direct-write installer. Pack hashes prove
+  content identity, not truth.
 - This module is independent software, not an official Hetzner product.
   Coolify is optional and separately owned; the module never manages
   inside it. A passing preflight is point-in-time, not a promise.

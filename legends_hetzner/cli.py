@@ -21,8 +21,8 @@ EXIT_CREATE = 4
 EXIT_AUTH = 5
 
 _CREATE_EPILOG = (
-    "Provision support: mocked-write-only until explicit disposable resource "
-    "test. One CLI invocation; no client-side retry. Upstream hcloud HTTP "
+    f"Provision support: {PROVISION_SUPPORT}. "
+    "One CLI invocation; no client-side retry. Upstream hcloud HTTP "
     "retries (if any) are outside this wrapper."
 )
 

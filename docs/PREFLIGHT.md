@@ -25,10 +25,11 @@ judgment calls.
    outcomes (timeout, bad JSON, readback mismatch) return a nonzero exit
    with an honest `uncertain_*` receipt status, never false success.
 
-In v0.1.0 the live step is implemented but has no validated
-disposable-resource test, so supported use stops at step 3 plus mocked
-writes. A live create needs explicit owner authorization for a defined
-scope, and the receipt status must be quoted exactly.
+The live step has a validated disposable canary from a Windows client to
+an Ubuntu 24.04 server, including readback, SSH, cloud-init and cleanup.
+See `docs/VALIDATION.md` for the exact scope. A live create still needs
+explicit owner authorization for a defined scope, and the receipt status
+must be quoted exactly.
 
 ## Plan rules that commonly bite
 
