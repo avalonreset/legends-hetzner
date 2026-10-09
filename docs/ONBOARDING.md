@@ -125,7 +125,8 @@ legends-hetzner --context <context-name> doctor --live
 
 Expected locations include `fsn1`, `nbg1`, `hel1`, `ash`, `hil`, and `sin`
 at tutorial time; treat the live output as current. All wrapper output is
-JSON to stdout. Exit 0 means the probe passed.
+JSON to stdout. Offline `doctor` exits nonzero when `hcloud` is missing or errored
+(readiness gate); exit 0 means the probe passed.
 
 Direct `hcloud` equivalent from the tutorial:
 

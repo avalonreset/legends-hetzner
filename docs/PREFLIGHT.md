@@ -1,19 +1,21 @@
 # Plans and preflight
 
 The wrapper separates offline intent from live verification from the single
-write. Contract v1 defines the exact syntax; this runbook explains the
+write. Contract v4 defines the exact syntax; this runbook explains the
 judgment calls.
 
 ## The flow
 
 1. `server plan` (offline, no auth): captures name, type, location, image,
-   SSH keys, optional user data, and labels into an immutable plan file
-   `{plan: {...}, plan_hash: sha256:...}`. It refuses to overwrite an
-   existing `--out` path.
+   SSH keys (names or numeric IDs), optional user data, and labels into an
+   immutable plan file, records the active `--context` as `planned_context`
+   (null in token mode), and snapshots the reviewed user-data bytes with
+   their digest. It refuses to overwrite an existing `--out` path. Plans
+   may contain plaintext bootstrap config: keep them private and secret-free.
 2. `server preflight` (live read-only, explicit auth): verifies the plan
-   hash, the user-data digest, and the plan age, then checks the name,
-   type, location, image, and keys against live state. It makes no writes
-   and reports `{passed, checks: [...], failures: [...]}`.
+   hash, the planned context, the user-data digest, and the plan age, then
+   checks the name, type, location, image, and keys against live state. It
+   makes no writes and reports `{passed, checks: [...], failures: [...]}`.
 3. `server create --dry-run` (live read-only behavior): runs the same
    verification the live path runs, then stops before the write.
 4. Live `server create` (explicit auth, `--approve`, matching `--plan-hash`):
@@ -30,11 +32,13 @@ scope, and the receipt status must be quoted exactly.
 
 ## Plan rules that commonly bite
 
-- At least one `--ssh-key` is required. Use key names exactly as registered
-  in the project; the API rejects keys with leading whitespace.
+- At least one `--ssh-key` is required, as a name or numeric ID. The API
+  rejects keys with leading whitespace.
 - User data is optional, at most 32768 bytes, and must start with
-  `#cloud-config` or `#!/`. Its digest is pinned; editing the file after
-  planning invalidates the plan (`PLAN_TAMPERED`, exit 2).
+  `#cloud-config` or `#!/`. The reviewed bytes are snapshotted into the
+  plan with their digest, so editing the original file after planning does
+  not alter the plan; editing plan contents without recomputing the
+  reviewed hash is rejected (`PLAN_TAMPERED`, exit 2).
 - Plans expire: default max age is 24 hours (`--max-plan-age-hours`
   overrides). Re-plan rather than forcing an old plan.
 - The live create requires both `--approve` and `--plan-hash sha256:...`
@@ -52,9 +56,9 @@ auth and confirm:
 - The server type exists in the chosen location. Server types are
   per-location since 2025-09-24, and new types arrived 2025-10-16 while old
   shared-vCPU types were deprecated.
-- The location name is current. The datacenter API endpoints were removed
+- The location (name or numeric ID) is current. The datacenter API endpoints were removed
   on 2026-10-01 and return 410 Gone; use locations.
-- The SSH key names exist in the target project.
+- The SSH keys (names or numeric IDs) exist in the target project.
 
 ## Reading preflight output
 
@@ -64,7 +68,9 @@ auth and confirm:
   `failures[]` and fix the plan or the live state, then re-run.
 - Exit 2 on a plan problem (`PLAN_TAMPERED`, `PLAN_STALE`,
   `PLAN_HASH_MISMATCH`) means the plan file itself is unusable. Make a new
-  plan; do not hand-edit the old one.
+  plan; do not hand-edit the old one. `PLAN_CONTEXT_MISMATCH` means the
+  active auth selection differs from the planned one: re-run under the
+  planned selection or make a new plan.
 
 ## Labels and naming
 

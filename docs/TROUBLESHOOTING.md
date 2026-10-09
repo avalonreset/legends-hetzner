@@ -25,10 +25,14 @@ values exactly.
   only with explicit authorization for the defined scope.
 - `PLAN_HASH_MISMATCH` (exit 2): the `--plan-hash` argument does not match
   the embedded plan hash. Copy the hash from the plan file exactly.
-- `PLAN_TAMPERED` (exit 2): the plan file or user-data file changed after
-  planning. Make a new plan; never hand-edit a plan file.
+- `PLAN_TAMPERED` (exit 2): plan contents changed without a recomputed
+  reviewed hash. Edits to the original user-data file do not affect the
+  snapshotted plan. Make a new plan; never hand-edit a plan file.
 - `PLAN_STALE` (exit 2): the plan is older than the max age (default 24
   hours). Re-plan against current live state.
+- `PLAN_CONTEXT_MISMATCH` (exit 2): preflight or create ran under a
+  different auth selection than planned. Re-run with the planned
+  `--context` (or token mode) or make a new plan.
 - Exit 3 with `failures[]`: preflight blocked, no write attempted. Fix the
   named item (name taken, type, location, image, or keys) and re-run.
 - Exit 4 with `uncertain_*`: the write outcome is unknown. Do not retry

@@ -954,16 +954,26 @@ class TestCliOffline(unittest.TestCase):
         self.assertEqual(proc.returncode, 2)
 
     def test_doctor_offline(self):
-        proc = _run_cli("doctor", "--hcloud-bin", NO_BIN)
-        self.assertEqual(proc.returncode, 0)
+        proc = _run_cli("--hcloud-bin", NO_BIN, "doctor")
+        self.assertEqual(proc.returncode, 1)
         report = json.loads(proc.stdout)
         self.assertEqual(report["mode"], "offline")
         self.assertTrue(report["python_ok"])
         self.assertFalse(report["hcloud_found"])
 
+    def test_doctor_offline_real_binary(self):
+        import shutil
+        if shutil.which("hcloud") is None:
+            self.skipTest("no hcloud on PATH")
+        proc = _run_cli("doctor")
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        report = json.loads(proc.stdout)
+        self.assertTrue(report["hcloud_found"])
+        self.assertTrue(report["hcloud_version"].startswith("hcloud "))
+
     def test_doctor_live_probe_reports_auth(self):
-        proc = _run_cli("doctor", "--live", "--hcloud-bin", NO_BIN)
-        self.assertEqual(proc.returncode, 0)
+        proc = _run_cli("--hcloud-bin", NO_BIN, "doctor", "--live")
+        self.assertEqual(proc.returncode, 5)
         report = json.loads(proc.stdout)
         self.assertFalse(report["live_ok"])
         codes = [e["code"] for e in report["errors"]]
@@ -986,7 +996,7 @@ class TestCliOffline(unittest.TestCase):
         self.assertEqual(proc.returncode, 2)
 
     def test_inventory_missing_binary_is_local(self):
-        proc = _run_cli("inventory", "--hcloud-bin", NO_BIN,
+        proc = _run_cli("--hcloud-bin", NO_BIN, "inventory",
                         token=FAKE_TOKEN)
         self.assertEqual(proc.returncode, 1)
         self.assertIn("HCLOUD_NOT_FOUND", proc.stderr)
@@ -1049,8 +1059,8 @@ class TestCliOffline(unittest.TestCase):
             proc = _run_cli("server", "preflight", "--plan", out)
             self.assertEqual(proc.returncode, 5)
             self.assertIn("AUTH_MISSING", proc.stderr)
-            proc = _run_cli("server", "preflight", "--plan", out,
-                            "--hcloud-bin", NO_BIN, token=FAKE_TOKEN)
+            proc = _run_cli("--hcloud-bin", NO_BIN, "server",
+                            "preflight", "--plan", out, token=FAKE_TOKEN)
             self.assertEqual(proc.returncode, 1)
             self.assertIn("HCLOUD_NOT_FOUND", proc.stderr)
 
@@ -1076,8 +1086,9 @@ class TestCliOffline(unittest.TestCase):
                             "--plan-hash", result["plan_hash"], "--approve")
             self.assertEqual(proc.returncode, 5)
             self.assertIn("AUTH_MISSING", proc.stderr)
-            proc = _run_cli("server", "create", "--plan", out,
+            proc = _run_cli("--hcloud-bin", NO_BIN, "server",
+                            "create", "--plan", out,
                             "--plan-hash", result["plan_hash"], "--approve",
-                            "--hcloud-bin", NO_BIN, token=FAKE_TOKEN)
+                            token=FAKE_TOKEN)
             self.assertEqual(proc.returncode, 3)
             self.assertIn("PREFLIGHT_BLOCKED", proc.stderr)

@@ -32,7 +32,7 @@ Confirm available contexts and the active one with the context subcommands;
 check exact flags with `hcloud context --help` against your installed
 version and the command manual (ledger source 7).
 
-## The wrapper auth rule (contract v1)
+## The wrapper auth rule (contract v4)
 
 Each wrapper invocation uses exactly one auth source:
 
@@ -50,6 +50,13 @@ need no auth. Live read-only commands (`doctor --live`, `inventory`,
 `catalog`, `server preflight`) and `server create` need explicit auth every
 time; there is no ambient default beyond the single selected source.
 
+Planned binding: `server plan` records the active `--context` as
+`planned_context`, or null when planning in token mode. `server preflight`
+and `server create` require the same selection and fail with
+`PLAN_CONTEXT_MISMATCH` (exit 2) otherwise. Plan and execute under one
+selection; switching context, or switching between context and token,
+needs the matching selection or a new plan.
+
 ## Suggested practice
 
 1. Start every session with offline `doctor`, then live `doctor --live`.
@@ -58,6 +65,7 @@ time; there is no ambient default beyond the single selected source.
 3. Name the auth source in your notes (context name or "env token"), never
    the token value.
 4. For multi-project work, run one invocation per project with its own
-   `--context`, and label the evidence per project.
+   `--context`, plan each project under its context, and label the
+   evidence per project.
 5. Rotate a token in the Console if it may have been exposed, then update
    the context; the wrapper stores nothing, so there is nothing else to edit.

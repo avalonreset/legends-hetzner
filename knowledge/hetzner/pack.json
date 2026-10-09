@@ -11,7 +11,7 @@
     },
     {
       "path": "auth-contexts.md",
-      "sha256": "8848dd547cc784d87948338e5c6d8ae0ae9bd6cd75d823fb120ee755754a9a36"
+      "sha256": "be91703adc53f78869660cf40608085d9c76130da040474d9c6b863b77cdcecb"
     },
     {
       "path": "backups-restore.md",
@@ -31,11 +31,11 @@
     },
     {
       "path": "onboarding.md",
-      "sha256": "0e1a255926ccea07ad1533184c70b22f28c24f54e991586e59d47cbf4d2237d5"
+      "sha256": "f6e0ec2319f1571a57f00901b25b2a3e86a4ec441aa491fd807e30de78d6ff3c"
     },
     {
       "path": "preflight.md",
-      "sha256": "6d70d0392e92e6383e13a00daaefe0e14de8857c023f6b44aaef65668088f6d5"
+      "sha256": "a483120804006202f83d8c46bdf8efe4cab44b5b5aa2836545d2c9377a1fe1a1"
     },
     {
       "path": "sources.md",
@@ -43,7 +43,7 @@
     },
     {
       "path": "ssh-bootstrap.md",
-      "sha256": "79a64608a6e9d582d7a8cea65bebf0ca4631efd558c644e251a089ae517d8628"
+      "sha256": "82750ecc41a3ec877f9a27e622976048f4734a549cfe33acefa05e57f8f65bbe"
     },
     {
       "path": "templates/decision-log.md",
@@ -63,7 +63,7 @@
     },
     {
       "path": "troubleshooting.md",
-      "sha256": "afa19cb70fe399f59ffde3058582a18234c22047f4c6fa1c88335ebf28d871cd"
+      "sha256": "8d219b9880115ac2d100f631c17250914eb276cf7e3828d786e1b5666b059472"
     }
   ],
   "ontology": {

@@ -56,7 +56,8 @@ python -m legends_hetzner --context <context-name> doctor --live
 python -m legends_hetzner --context <context-name> catalog --kind locations
 ```
 
-All wrapper output is JSON to stdout.
+All wrapper output is JSON to stdout. Offline `doctor` exits nonzero
+when `hcloud` is missing or errored.
 
 ## Record
 

@@ -16,6 +16,7 @@ receipt statuses exactly.
 
 - `NEED_APPROVAL`, `PLAN_HASH_MISMATCH`, `PLAN_TAMPERED`, `PLAN_STALE`
   (exit 2): fix approval, hash, or make a new plan. Never hand-edit plans.
+  `PLAN_CONTEXT_MISMATCH`: re-run under the planned selection or re-plan.
 - Exit 3: preflight blocked, nothing written. Fix `failures[]`, re-run.
 - Exit 4 `uncertain_*`: do not retry blindly. Inspect receipt, Console,
   and `inventory` first. The wrapper performs a single CLI invocation and

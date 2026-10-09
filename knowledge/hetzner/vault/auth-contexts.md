@@ -17,7 +17,7 @@ Keep the name similar to the project name. Confirm flags with
 `hcloud context --help` and the manual at
 `https://github.com/hetznercloud/cli/tree/main/docs`.
 
-## Wrapper rule (contract v1)
+## Wrapper rule (contract v4)
 
 One auth source per invocation: `HCLOUD_TOKEN` xor `--context NAME`.
 Both set is `AUTH_AMBIGUOUS` (exit 2). Neither on a live command is
@@ -26,7 +26,9 @@ call and `HCLOUD_TOKEN` is removed from the child environment.
 
 Offline (no auth): `doctor`, `server plan`, `resources`. Live (explicit
 auth): `doctor --live`, `inventory`, `catalog`, `server preflight`,
-`server create`.
+`server create`. Plan records the active `--context` as `planned_context`
+(null in token mode); preflight and create enforce it
+(`PLAN_CONTEXT_MISMATCH`, exit 2).
 
 ## Practice
 

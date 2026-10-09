@@ -23,7 +23,8 @@ API changelog (ledger source 2), observed 2026-10-09.
 - The API rejects SSH keys with leading whitespace characters
   (changelog 2026-04-22). Trim key material before registering it.
 - The wrapper requires at least one `--ssh-key` in every `server plan`
-  (contract v1). Keyless password-only creates are out of scope.
+  (contract v4, names or numeric IDs). Keyless password-only creates are
+  out of scope.
 
 ## cloud-init specifics
 
@@ -45,8 +46,9 @@ API changelog (ledger source 2), observed 2026-10-09.
   help page (ledger sources 26 and 27, both linked from the FAQ), plus the
   Hetzner community cloud-config tutorial (ledger source 21).
 - Wrapper plan rules: user-data file is optional, at most 32768 bytes, and
-  must start with `#cloud-config` or `#!/`. Its SHA-256 digest is pinned in
-  the plan and re-verified at create time.
+  must start with `#cloud-config` or `#!/`. The reviewed bytes are
+  snapshotted into the plan with their SHA-256 digest and re-verified at
+  create time.
 - The module ships an optional generic starting fixture,
   `cloud-init/minimal.yaml` (`#cloud-config`, SSH password auth off, UTC,
   completion message). It carries no keys or tokens; select a registered
@@ -73,7 +75,7 @@ Assume `server1` was rebuilt from snapshot `snap1`:
 
 ## Bootstrap verification checklist
 
-1. `server plan` accepted the key names and pinned the user-data digest.
+1. `server plan` accepted the keys and snapshotted the user data with its digest.
 2. `server preflight` passed against live state (keys exist, image valid).
 3. `server create --dry-run` passed; a live create ran only with explicit
    authorization and returned a receipt with status `created`.
@@ -85,5 +87,5 @@ Assume `server1` was rebuilt from snapshot `snap1`:
    and who holds access. The record template is
    `knowledge/hetzner/vault/templates/server-record.md`.
 
-Record key names and fingerprints in private records, never private key
+Record key names or IDs and fingerprints in private records, never private key
 material.

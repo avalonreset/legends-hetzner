@@ -57,8 +57,8 @@ def write_clean_tree(root: Path) -> None:
     (root / "docs" / "AGENT-RECIPE.md").write_text("# r\n", encoding="utf-8")
     vault = root / "knowledge" / "hetzner" / "vault"
     vault.mkdir(parents=True)
-    (vault / "index.md").write_text("# i\n", encoding="utf-8")
-    digest = hashlib.sha256(b"# i\n").hexdigest()
+    (vault / "index.md").write_bytes(b"# i\n")
+    digest = hashlib.sha256((vault / "index.md").read_bytes()).hexdigest()
     pack = {"schema": "legends.knowledge-pack/v1",
             "module": "legends-hetzner", "entrypoint": "index.md",
             "files": [{"path": "index.md", "sha256": digest}]}

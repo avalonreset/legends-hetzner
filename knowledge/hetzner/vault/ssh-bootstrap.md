@@ -17,7 +17,7 @@ Sources: official servers FAQ
 - Newer images set `PermitRootLogin prohibit-password`. Prefer keys.
 - API rejects keys with leading whitespace (changelog 2026-04-22:
   `https://docs.hetzner.cloud/changelog#2026-04-22-ssh-key-validation`).
-- Wrapper `server plan` requires at least one `--ssh-key`.
+- Wrapper `server plan` requires at least one `--ssh-key` (name or numeric ID).
 
 ## cloud-init
 
@@ -31,7 +31,7 @@ Sources: official servers FAQ
   `https://help.ubuntu.com/community/CloudInit`,
   `https://community.hetzner.com/tutorials/basic-cloud-config/`.
 - Wrapper plan: user data optional, max 32768 bytes, must start with
-  `#cloud-config` or `#!/`; digest pinned and re-verified.
+  `#cloud-config` or `#!/`; reviewed bytes snapshotted with digest, re-verified at create.
 - Server Metadata is official with documented `/hetzner/v1/*` routes (API
   reference Server Metadata section). EC2-compatible routes were removed
   2026-08-01. Metadata serves user data back, so user data is visible to

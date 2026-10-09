@@ -78,7 +78,7 @@ does not need, bundle, or endorse any MCP server either way.
 
 | # | Source | Location | Observed | Used for |
 |---|---|---|---|---|
-| 32 | `docs/CLI-CONTRACT.json` contract v1 | In-repo `docs/` | 2026-10-09 | Exact wrapper syntax, auth rule, exit codes |
+| 32 | `docs/CLI-CONTRACT.json` contract v4 | In-repo `docs/` | 2026-10-09 | Exact wrapper syntax, auth rule, exit codes |
 | 33 | Module knowledge contract | https://github.com/avalonreset/cto-legends/blob/main/docs/MODULE-KNOWLEDGE.md | 2026-10-09 | Pack shape and ownership model |
 | 34 | Empire knowledge-packs doc (`legends-empire`) | https://github.com/avalonreset/legends-empire/blob/main/docs/knowledge-packs.md | 2026-10-09 | Attach and update engine behavior |
 
