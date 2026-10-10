@@ -6,10 +6,9 @@
 [![checks](https://github.com/avalonreset/legends-hetzner/actions/workflows/checks.yml/badge.svg)](https://github.com/avalonreset/legends-hetzner/actions/workflows/checks.yml)
 [![license](https://img.shields.io/github/license/avalonreset/legends-hetzner?style=flat-square&label=license&labelColor=000000&color=666666)](LICENSE)
 
-Agent-operated Hetzner Cloud workflows using the official `hcloud` CLI, with
-reviewed provisioning plans and a source-cited knowledge library. Inspect a
-project, check the current catalog, prepare a server plan, and give the next
-agent the same documented procedure.
+Hetzner Cloud CLI workflows for AI agents, built on the official `hcloud` CLI.
+Inspect servers, prepare reviewed provisioning plans, check SSH keys and
+cloud-init inputs, and carry a source-cited operations library between sessions.
 
 The runtime uses Python 3.10+ and works without PowerShell. Hetzner credentials
 are needed only for live provider operations. The Markdown library remains
@@ -29,6 +28,17 @@ readable without an agent, a running service, or an Empire vault.
 This is a focused operator workflow, not coverage of every Hetzner API.
 It does not administer Robot bare-metal servers, automatically migrate apps,
 manage billing, or replace infrastructure-as-code reconciliation.
+
+### Why use this alongside hcloud?
+
+Use `hcloud` directly when you want its provider commands. Legends Hetzner adds
+a repeatable procedure for an agent: distinguish local readiness from API
+access, save a plan for review, recheck it against current provider data, and
+require that plan's hash for creation. Its documented procedures and optional
+knowledge shelf help the next session pick up the same workflow.
+
+It calls the official CLI rather than replacing it. The plan checks apply to
+this module's commands; they do not restrict direct CLI or console access.
 
 ## Install with your agent
 
@@ -66,7 +76,9 @@ legends-hetzner resources
 installation outside a Git checkout. On systems where Python is named
 `python3`, use that command instead.
 
-## First useful workflow
+<a name="first-useful-workflow"></a>
+
+## Quick start: inspect your Hetzner Cloud project
 
 Configure a named project context using the official CLI's interactive setup:
 
@@ -80,6 +92,8 @@ legends-hetzner --context my-project catalog
 Alternatively, provide `HCLOUD_TOKEN` through your environment or secret
 manager. Do not combine it with `--context`; the module rejects ambiguous
 authentication. It does not search personal vaults for credentials.
+
+### Plan and provision a server
 
 Prepare a plan using a type, location, image and existing SSH key from the
 current catalog:
@@ -105,6 +119,11 @@ every client, image and location combination.
 
 Keep plans, receipts and inventories in a private working directory outside
 the installed module. Do not put secrets in cloud-init data.
+
+For SSH-key selection, bootstrap checks and cloud-init troubleshooting, follow
+the [SSH and bootstrap guide](knowledge/hetzner/vault/ssh-bootstrap.md).
+The [preflight guide](knowledge/hetzner/vault/preflight.md) explains the checks
+to review before provisioning.
 
 ## Optional Empire knowledge shelf
 
@@ -132,8 +151,10 @@ plans. Coolify owns application deployment and application-level configuration.
 Use the companion [legends-coolify](https://github.com/avalonreset/legends-coolify)
 for its supported application-platform workflows.
 
-An MCP server is not required. The official CLI is the provider interface;
-the knowledge library records the upstream research and boundaries.
+Legends Hetzner is a CLI workflow, not a Hetzner MCP server. Agents need command
+execution and file access; an MCP transport is not required or bundled. The
+official CLI is the provider interface, and the knowledge library records the
+upstream research and boundaries.
 
 ## Development and support
 
