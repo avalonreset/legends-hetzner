@@ -18,6 +18,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
@@ -72,6 +74,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -85,6 +89,7 @@ jobs:
       - name: Check out pinned Empire engine
         uses: actions/checkout@v4
         with:
+          persist-credentials: false
           repository: avalonreset/legends-empire
           # Immutable legends-empire 0.3.1 transaction engine.
           ref: dac252a647cbe8b42285317fe096e20afaf2fbe9
