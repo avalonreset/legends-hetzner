@@ -156,6 +156,28 @@ execution and file access; an MCP transport is not required or bundled. The
 official CLI is the provider interface, and the knowledge library records the
 upstream research and boundaries.
 
+## Architecture and how it works
+
+```text
+Operator / Agent
+  -> legends-hetzner CLI (readiness, inventory, catalog, server plan)
+  -> Reviewed plan JSON + SHA-256 content hash
+  -> Preflight verification against live provider catalog
+  -> Official hcloud CLI execution (only with --approve and matching hash)
+```
+
+- `legends_hetzner/`: Python CLI wrapper, plan hash verifier, and resource locator.
+- `knowledge/hetzner/`: Attachable `legends.knowledge-pack/v1` reference pack for [`legends-empire`](https://github.com/avalonreset/legends-empire).
+- `docs/`: Agent recipe, validation scope, live canary procedure, and [search strategy](docs/SEARCH-STRATEGY.md).
+
+## FAQ
+
+**Does `legends-hetzner` replace the official `hcloud` CLI?**
+No. It wraps the official `hcloud` CLI with an agent-ready review procedure: separate local readiness from live API checks, write a hash-pinned server plan, run preflight validation, and require explicit approval before creation.
+
+**Can I read the knowledge pack without Hetzner credentials?**
+Yes. Both `legends-hetzner doctor` and `legends-hetzner resources` work offline without credentials, and the Markdown runbooks in `knowledge/hetzner/` can be read directly or attached to a [`legends-empire`](https://github.com/avalonreset/legends-empire) vault.
+
 ## Development and support
 
 - [Agent recipe](docs/AGENT-RECIPE.md)
