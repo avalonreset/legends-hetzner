@@ -1,6 +1,6 @@
 # `legends-hetzner` agent recipe (canonical)
 
-Module `legends-hetzner` v0.1.1. Agent-operated Hetzner Cloud workflows that
+Module `legends-hetzner` v0.1.2. Agent-operated Hetzner Cloud workflows that
 wrap the official `hcloud` CLI with reviewed plans, read-only preflight, and
 a source-cited reference library.
 
@@ -11,14 +11,14 @@ No MCP server is required; see `docs/LIMITATIONS.md` for the MCP finding.
 Read first, in order:
 
 1. `docs/CLI-CONTRACT.json` (exact CLI syntax, source of truth)
-2. `docs/LIMITATIONS.md` (what v0.1.1 does not do)
+2. `docs/LIMITATIONS.md` (what v0.1.2 does not do)
 3. `docs/SOURCES.md` (source ledger with dates and URLs)
 4. The runbook for the task at hand (list below)
 
 ## Runtime shape
 
 - Entries: `python -m legends_hetzner` and the `legends-hetzner` console script.
-- Python 3.10+ standard library only. No third-party runtime dependency.
+- Python 3.11+ standard library only. No third-party runtime dependency.
 - Provider calls go to the external `hcloud` executable via argv with
   `shell=False` and a bounded timeout. `hcloud` is an upstream prerequisite,
   never vendored.
@@ -85,7 +85,7 @@ contract file wins. Never invent wrapper flags.
    and cannot be injected into existing servers by Hetzner. Verify access and
    cloud-init completion before declaring success.
 5. Backups and restore: `docs/BACKUPS.md`. The wrapper has no backup or
-   snapshot commands in v0.1.1; use the Console, the API, or `hcloud`
+   snapshot commands in v0.1.2; use the Console, the API, or `hcloud`
    directly, and prove restores with a rehearsal, not with backup existence.
 6. Knowledge: `docs/KNOWLEDGE-PACK.md`. The attachable pack is
    `knowledge/hetzner/pack.json` (schema `legends.knowledge-pack/v1`).

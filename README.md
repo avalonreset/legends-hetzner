@@ -10,7 +10,7 @@ Hetzner Cloud CLI workflows for AI agents, built on the official `hcloud` CLI.
 Inspect servers, prepare reviewed provisioning plans, check SSH keys and
 cloud-init inputs, and carry a source-cited operations library between sessions.
 
-The runtime uses Python 3.10+ and works without PowerShell. Hetzner credentials
+The runtime uses Python 3.11+ and works without PowerShell. Hetzner credentials
 are needed only for live provider operations. The Markdown library remains
 readable without an agent, a running service, or an Empire vault.
 
@@ -67,7 +67,7 @@ For standalone use, install the wheel from the
 a virtual environment, or install the tagged source:
 
 ```console
-python -m pip install "git+https://github.com/avalonreset/legends-hetzner.git@v0.1.1"
+python -m pip install "git+https://github.com/avalonreset/legends-hetzner.git@v0.1.2"
 legends-hetzner doctor
 legends-hetzner resources
 ```

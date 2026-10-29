@@ -18,15 +18,15 @@ from legends_hetzner import hcloud as H
 
 class ContractTest(unittest.TestCase):
     def test_version_and_provision_canary(self):
-        self.assertEqual(VERSION, "0.1.1")
+        self.assertEqual(VERSION, "0.1.2")
         self.assertEqual(PROVISION_SUPPORT, "live-canary-validated: Windows client, Ubuntu 24.04 server; see docs/VALIDATION.md")
         buf = io.StringIO()
         with redirect_stdout(buf):
             self.assertEqual(CLI.main(["--version"]), 0)
-        self.assertEqual(buf.getvalue().strip(), "0.1.1")
+        self.assertEqual(buf.getvalue().strip(), "0.1.2")
 
     def test_doctor_offline_no_auth(self):
-        clean = {"mode": "offline", "version": "0.1.1",
+        clean = {"mode": "offline", "version": "0.1.2",
                  "provision_support": PROVISION_SUPPORT,
                  "hcloud_found": True, "python_ok": True, "errors": []}
         with patch.dict(os.environ, {}, clear=False):
@@ -38,11 +38,11 @@ class ContractTest(unittest.TestCase):
         self.assertEqual(code, 0)
         report = json.loads(buf.getvalue())
         self.assertEqual(report["mode"], "offline")
-        self.assertEqual(report["version"], "0.1.1")
+        self.assertEqual(report["version"], "0.1.2")
         self.assertIn("live-canary-validated", report["provision_support"])
 
     def test_doctor_offline_missing_hcloud_nonzero(self):
-        bad = {"mode": "offline", "version": "0.1.1", "hcloud_found": False,
+        bad = {"mode": "offline", "version": "0.1.2", "hcloud_found": False,
                "python_ok": True,
                "errors": [{"code": "HCLOUD_NOT_FOUND", "message": "missing"}]}
         with patch("legends_hetzner.doctor.offline", return_value=bad):
@@ -116,7 +116,7 @@ class ContractTest(unittest.TestCase):
         self.assertTrue(os.path.isabs(data["recipe"]))
         self.assertTrue(os.path.isabs(data["pack_dir"]))
         self.assertIn(data["source"], ("checkout", "package_data", "missing"))
-        self.assertEqual(data["version"], "0.1.1")
+        self.assertEqual(data["version"], "0.1.2")
 
     def test_context_flag_reaches_adapter(self):
         seen = {}

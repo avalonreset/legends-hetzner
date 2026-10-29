@@ -9,6 +9,6 @@ authors:
 repository-code: "https://github.com/avalonreset/legends-hetzner"
 url: "https://github.com/avalonreset/cto-legends"
 license: "MIT"
-version: "0.1.1"
+version: "0.1.2"
 date-released: "2026-10-24"
 abstract: "Inspect Hetzner Cloud projects, prepare reviewed server plans, and attach a source-cited operations library to a selected Empire vault."

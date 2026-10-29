@@ -7,7 +7,7 @@ live readiness before authorized provider operations.
 Never copy private inventories, credentials, machine identities or generated
 operational receipts into this repository.
 
-Use Python 3.10+ standard library for the portable runtime and the official
+Use Python 3.11+ standard library for the portable runtime and the official
 `hcloud` CLI for provider operations. No PowerShell dependency for public use.
 Live operations require the user's actual authorization for the exact target.
 Do not infer provisioning or destructive authority from installation or a

@@ -12,7 +12,7 @@
    temporary vault using `scripts/verify_knowledge_attachment.py`. The
    dedicated CI integration job pins an immutable Empire commit and uses
    the installed Hetzner wheel's pack on native Windows, macOS and Linux
-   with Python 3.11. Keep the core Python 3.10/3.14 matrix separate from
+   with Python 3.11. Keep the core Python 3.11/3.14 matrix separate from
    Empire's Python 3.11+ requirement.
 6. Record measured results in `docs/VALIDATION.md`. Inspect source archives,
    wheel contents, generated metadata and Git history for private material.

@@ -1,6 +1,6 @@
 # Honest limitations
 
-What v0.1.1 does not do, what is untested, and where to check instead.
+What v0.1.2 does not do, what is untested, and where to check instead.
 
 ## Provisioning
 
@@ -11,7 +11,7 @@ What v0.1.1 does not do, what is untested, and where to check instead.
   See `docs/VALIDATION.md`.
 - The wrapper has no commands for backups, snapshots, rebuilds, rescue,
   firewalls, networks, load balancers, DNS, volumes, images, or SSH key
-  management in v0.1.1. Those operations stay on their official surfaces:
+  management in v0.1.2. Those operations stay on their official surfaces:
   Console, API, or `hcloud` directly.
 
 ## Evidence status

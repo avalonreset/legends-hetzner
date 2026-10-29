@@ -14,13 +14,13 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ['3.10', '3.14']
+        python-version: ['3.11', '3.14']
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Release gate
@@ -29,7 +29,7 @@ jobs:
         run: python -m unittest discover -s tests -v
       - name: Build wheel and sdist
         run: |
-          python -m pip install build
+          python -m pip install --upgrade "pip>=26.2.2" build
           python -m build
       - name: Clean install outside checkout
         shell: bash
@@ -73,21 +73,21 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.11'
       - name: Build and install Hetzner wheel
         shell: bash
         run: |
           set -e
-          python -m pip install build
+          python -m pip install --upgrade "pip>=26.2.2" build
           python -m build --wheel
           python -m pip install dist/*.whl
       - name: Check out pinned Empire engine
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           repository: avalonreset/legends-empire

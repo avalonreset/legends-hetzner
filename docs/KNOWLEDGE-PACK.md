@@ -9,7 +9,7 @@ reference shelf, not a vault and not a skill.
 - Schema: `legends.knowledge-pack/v1`
 - Id: `hetzner`
 - Module: `legends-hetzner`
-- Version: `0.1.1`
+- Version: `0.1.2`
 - Entrypoint: `index.md`
 - Suggested home: `wiki/library/legends-hetzner/hetzner`
 - Ontology kind: `library`

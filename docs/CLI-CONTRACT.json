@@ -1,24 +1,24 @@
 {
   "contract_version": 4,
   "tool": "legends-hetzner",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "entries": [
     "python -m legends_hetzner",
     "legends-hetzner -> legends_hetzner.cli:main"
   ],
   "runtime": {
-    "language": "Python 3.10+ stdlib only",
+    "language": "Python 3.11+ stdlib only",
     "provider": "hcloud CLI as external upstream dependency (argv, shell=False, bounded timeout, location not datacenter)",
     "hcloud_versions": ["1.61.0", "1.70.1"],
     "license": "MIT for legends-hetzner sources; hcloud CLI remains upstream external dependency, not vendored"
   },
   "provision_support": "live-canary-validated: Windows client, Ubuntu 24.04 server; see docs/VALIDATION.md",
-  "provision_note": "Disposable live canary validated with the released 0.1.0 wheel: Windows/Python 3.11.7, hcloud 1.70.1, CX23/FSN1/Ubuntu 24.04; create/readback, key-based SSH, cloud-init and cleanup passed. Version 0.1.1 changes evidence labels, not provider execution. Other live client/image/location combinations and application health remain unvalidated.",
+  "provision_note": "Disposable live canary validated with the released 0.1.0 wheel: Windows/Python 3.11.7, hcloud 1.70.1, CX23/FSN1/Ubuntu 24.04; create/readback, key-based SSH, cloud-init and cleanup passed. Version 0.1.2 changes evidence labels, not provider execution. Other live client/image/location combinations and application health remain unvalidated.",
   "scope_limits": [
     "Single CLI invocation per create; upstream hcloud HTTP retries (if any) are outside this wrapper and unaudited.",
     "Custom endpoints unsupported: HCLOUD_ENDPOINT/HCLOUD_HOST/HCLOUD_DEBUG are stripped; upstream public defaults only.",
     "No datacenter support: location only (datacenters removed Oct1; deprecated in hcloud 1.61.0).",
-    "DNS/load balancers/firewalls/volumes/networks out of scope for v0.1.1.",
+    "DNS/load balancers/firewalls/volumes/networks out of scope for v0.1.2.",
     "Live canary is bounded to the documented configuration; macOS/Linux live writes and application/restore health are not validated."
   ],
   "auth": {
@@ -38,7 +38,7 @@
   "commands": {
     "doctor": {
       "usage": "doctor [--live]",
-      "default": "offline (no auth; reads hcloud version only). Exit nonzero when hcloud missing, errored, or Python <3.10 (readiness gate).",
+      "default": "offline (no auth; reads hcloud version only). Exit nonzero when hcloud missing, errored, or Python <3.11 (readiness gate).",
       "live": "requires explicit auth; read-only probe via location list. Exit 5 on AUTH_MISSING, 1 when live_ok false, 0 only when live_ok true.",
       "output": "JSON to stdout"
     },

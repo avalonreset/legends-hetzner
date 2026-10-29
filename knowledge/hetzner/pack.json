@@ -2,7 +2,7 @@
   "schema": "legends.knowledge-pack/v1",
   "id": "hetzner",
   "module": "legends-hetzner",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "entrypoint": "index.md",
   "files": [
     {
@@ -15,7 +15,7 @@
     },
     {
       "path": "backups-restore.md",
-      "sha256": "a8ddd414d929ef05dc1f770e80192506ff779453ea974136e51180da81718bab"
+      "sha256": "de0e9c9c488355a5c87297b9e0d9a123093e22a0c77da9214f06e6498c9a3e89"
     },
     {
       "path": "coolify-boundary.md",
@@ -23,7 +23,7 @@
     },
     {
       "path": "index.md",
-      "sha256": "c95e6290b0d736a03d0a2c4b223166d22f6a460d4b50222dafbd57518c097a5a"
+      "sha256": "54dea5a466203e369fddc61c375a77a75a5afd8767c67f2ff47206d9e015eed6"
     },
     {
       "path": "limitations.md",
@@ -31,7 +31,7 @@
     },
     {
       "path": "onboarding.md",
-      "sha256": "be61871749fd7946ffba404f1291f7c859eb0c3c0ec37b052d4044389db5f52b"
+      "sha256": "b53cf9a95b36d6941e3a6306b2dda8c4363c5a5f28f28300f6a6b9d0e6d0c53a"
     },
     {
       "path": "preflight.md",

@@ -75,7 +75,7 @@ cto-legends install legends-hetzner
 cto-legends install legends-hetzner --apply
 ```
 
-From a source checkout, the wrapper needs Python 3.10+ and nothing else
+From a source checkout, the wrapper needs Python 3.11+ and nothing else
 (standard library only):
 
 ```bash
@@ -84,7 +84,7 @@ python -m legends_hetzner --version
 
 On systems where Python is named `python3` (typical macOS and Linux), use
 `python3 -m legends_hetzner` instead. All `python -m` examples in these
-docs mean "the Python 3.10+ interpreter on PATH", and the installed
+docs mean "the Python 3.11+ interpreter on PATH", and the installed
 `legends-hetzner` console script takes the same arguments.
 
 ## 3. Token and context

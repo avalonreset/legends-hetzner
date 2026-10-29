@@ -1,4 +1,4 @@
-# Validation for 0.1.1
+# Validation for 0.1.2
 
 Observed 2026-10-09. These results describe tested behavior, not a guarantee
 for every provider account, OS release or future API response.
@@ -6,13 +6,13 @@ for every provider account, OS release or future API response.
 ## Platform and package checks
 
 For the initial 0.1.0 release, the 148-test suite passed on native Windows.
-Hosted CI passed all six Windows, macOS and Ubuntu jobs on Python 3.10 and
+Hosted CI passed all six Windows, macOS and Ubuntu jobs on Python 3.11 and
 3.14, including the
 release scan, tests, wheel/source builds, wheel installation outside the
 checkout, resource discovery and all 15 knowledge-file hashes.
 See the [verified matrix run](https://github.com/avalonreset/legends-hetzner/actions/runs/37949396480).
 
-For the 0.1.1 candidate, all 148 tests and the public release scan passed
+For the 0.1.2 candidate, all 148 tests and the public release scan passed
 again on Windows. Final release checks are recorded in the repository's
 checks workflow.
 
@@ -29,7 +29,7 @@ isolated Python environments. Provider credentials were not copied to the
 macOS or Linux test environments. Their readiness checks were offline;
 authenticated provider checks below were performed on Windows.
 The macOS system Python 3.9 was deliberately not used because it is below
-the package's declared Python 3.10 minimum.
+the package's declared Python 3.11 minimum.
 
 ## Provider behavior
 
@@ -59,7 +59,7 @@ and secret-free cloud-init data:
   remained. The temporary local private key was removed. Existing
   resources were preserved.
 
-Version 0.1.1 records this evidence without changing the provider execution
+Version 0.1.2 records this evidence without changing the provider execution
 path. This canary does not validate live writes from macOS or Linux
 clients, every type/image/location combination, application health, or
 backup restores. Mocked tests separately exercise guards and uncertainty
@@ -68,7 +68,7 @@ handling. See `docs/LIVE-CANARY.md` for the reproducible operator procedure.
 ## Knowledge integration
 
 The 0.1.0 knowledge pack passed integration with `legends-empire` 0.3.0
-in a disposable POSIX vault under WSL. The 0.1.1 pack then passed against
+in a disposable POSIX vault under WSL. The 0.1.2 pack then passed against
 the Empire 0.3.1 candidate on **native Windows**, Python 3.11.7, using a
 temporary local NTFS vault and the actual knowledge and transaction engines.
 Both checks passed all five scenarios:
@@ -86,7 +86,7 @@ Windows refusal was replaced with an engine-version readiness check.
 
 A separate CI job runs this integration from an installed Hetzner wheel
 on Windows, macOS and Linux with Python 3.11 against an immutable Empire
-commit. The core wrapper still supports Python 3.10+. Native Windows
+commit. The core wrapper still supports Python 3.11+. Native Windows
 filesystem and durability limits are described in `docs/KNOWLEDGE-PACK.md`;
 this acceptance check does not claim power-loss recovery.
 

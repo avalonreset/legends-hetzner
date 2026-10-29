@@ -22,7 +22,7 @@ sources 11 and 12), observed 2026-10-09.
   a new one so all settings are current. Keep the public IP by disabling
   auto-delete on the Primary IP or detaching it before deletion.
 
-## Wrapper scope in v0.1.1
+## Wrapper scope in v0.1.2
 
 The wrapper has no backup, snapshot, rebuild, or restore commands. Perform
 those operations in the Console, through the API, or with `hcloud`

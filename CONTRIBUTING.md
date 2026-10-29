@@ -4,7 +4,7 @@ Open an issue describing the observed behavior, platform, Python and `hcloud`
 versions, and sanitized reproduction. Keep feature proposals tied to a
 repeatable Hetzner Cloud workflow.
 
-Use Python 3.10 or later. Runtime dependencies should remain standard-library
+Use Python 3.11 or later. Runtime dependencies should remain standard-library
 only. Run:
 
 ```console

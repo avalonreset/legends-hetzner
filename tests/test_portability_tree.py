@@ -48,7 +48,7 @@ def write_clean_tree(root: Path) -> None:
         '__version__ = "0.1.0"\n', encoding="utf-8")
     (root / "pyproject.toml").write_text(
         '[project]\nname="x"\nversion="0.1.0"\n'
-        'requires-python=">=3.10"\nlicense="MIT"\n', encoding="utf-8")
+        'requires-python=">=3.11"\nlicense="MIT"\n', encoding="utf-8")
     for name in ("README.md", "LICENSE", "THIRD_PARTY_NOTICES.md"):
         (root / name).write_text("ok\n", encoding="utf-8")
     (root / ".gitignore").write_text(".env\n*.pem\n*.key\n",

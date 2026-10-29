@@ -9,7 +9,7 @@ this digest before each release. Subscribe to
 
 Out of scope here on purpose: load balancers, DNS, networks, firewalls,
 volumes, storage, certificates, and object storage have no wrapper commands
-in v0.1.1, so their changelog entries are omitted. Read the full changelog
+in v0.1.2, so their changelog entries are omitted. Read the full changelog
 before touching those resources.
 
 ## Must-handle changes

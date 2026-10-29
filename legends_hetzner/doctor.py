@@ -37,7 +37,7 @@ def offline(hcloud_bin: str = "hcloud", timeout: int | float | None = None) -> d
         "version": __version__,
         "mode": "offline",
         "python": f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
-        "python_ok": sys.version_info >= (3, 10),
+        "python_ok": sys.version_info >= (3, 11),
         "hcloud_bin": (hcloud_bin or "hcloud").strip() or "hcloud",
         "hcloud_found": found is not None,
         "hcloud_version": version,

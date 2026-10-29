@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 """Independent release gate for the public legends-hetzner candidate.
 
-Stdlib only, Python 3.10+. Scans the working tree for private
+Stdlib only, Python 3.11+. Scans the working tree for private
 fingerprints, secret files, non-portable dependencies, manifest
 inconsistencies and broken relative links. Site-specific literals live
 in a private fingerprints file (never published); this script embeds
@@ -24,7 +24,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-TOOL_VERSION = "0.1.1"
+TOOL_VERSION = "0.1.2"
 FAIL = "FAIL"
 WARN = "WARN"
 MAX_PER_CODE_PATH = 10
@@ -353,10 +353,10 @@ def check_py310_grammar(gate: Gate) -> None:
         if text is None:
             continue
         try:
-            ast.parse(text, filename=path.name, feature_version=(3, 10))
+            ast.parse(text, filename=path.name, feature_version=(3, 11))
         except SyntaxError as exc:
             gate.add(FAIL, "py", "PY310_GRAMMAR",
-                     f"not Python 3.10 grammar (line {exc.lineno}: "
+                     f"not Python 3.11 grammar (line {exc.lineno}: "
                      f"{exc.msg})", path)
 
 
@@ -642,12 +642,12 @@ def check_manifest(gate: Gate) -> None:
         ok = False
         if matched:
             op, minor = matched.group(1), int(matched.group(2))
-            ok = (op == ">=" and minor >= 10) or (op == ">" and minor >= 9)
+            ok = (op == ">=" and minor >= 11) or (op == ">" and minor >= 10)
         if ok:
             pass
         elif matched:
             gate.add(FAIL, "manifest", "REQ_PYTHON_FLOOR",
-                     f"requires-python {spec} is below the 3.10 floor",
+                     f"requires-python {spec} is below the 3.11 floor",
                      pyproject)
         else:
             gate.add(WARN, "manifest", "REQ_PYTHON_UNPARSED",
