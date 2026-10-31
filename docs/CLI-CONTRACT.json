@@ -1,24 +1,24 @@
 {
   "contract_version": 4,
   "tool": "legends-hetzner",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "entries": [
     "python -m legends_hetzner",
     "legends-hetzner -> legends_hetzner.cli:main"
   ],
   "runtime": {
     "language": "Python 3.11+ stdlib only",
-    "provider": "hcloud CLI as external upstream dependency (argv, shell=False, bounded timeout, location not datacenter)",
+    "provider": "hcloud CLI as external upstream dependency (argv, shell=False, bounded timeout, location not datacenter) plus stdlib read-only REST server_types availability enrichment when hcloud 1.61 omits available/category",
     "hcloud_versions": ["1.61.0", "1.70.1"],
     "license": "MIT for legends-hetzner sources; hcloud CLI remains upstream external dependency, not vendored"
   },
   "provision_support": "live-canary-validated: Windows client, Ubuntu 24.04 server; see docs/VALIDATION.md",
-  "provision_note": "Disposable live canary validated with the released 0.1.0 wheel: Windows/Python 3.11.7, hcloud 1.70.1, CX23/FSN1/Ubuntu 24.04; create/readback, key-based SSH, cloud-init and cleanup passed. Version 0.1.2 changes evidence labels, not provider execution. Other live client/image/location combinations and application health remain unvalidated.",
+  "provision_note": "Disposable live canary validated with the released 0.1.0 wheel: Windows/Python 3.11.7, hcloud 1.70.1, CX23/FSN1/Ubuntu 24.04; create/readback, key-based SSH, cloud-init and cleanup passed. Version 0.1.3 adds read-only radar and rate-limit-safe server snipe without changing the single-invocation create execution path. Other live client/image/location combinations and application health remain unvalidated.",
   "scope_limits": [
     "Single CLI invocation per create; upstream hcloud HTTP retries (if any) are outside this wrapper and unaudited.",
     "Custom endpoints unsupported: HCLOUD_ENDPOINT/HCLOUD_HOST/HCLOUD_DEBUG are stripped; upstream public defaults only.",
     "No datacenter support: location only (datacenters removed Oct1; deprecated in hcloud 1.61.0).",
-    "DNS/load balancers/firewalls/volumes/networks out of scope for v0.1.2.",
+    "DNS/load balancers/firewalls/volumes/networks out of scope for v0.1.3.",
     "Live canary is bounded to the documented configuration; macOS/Linux live writes and application/restore health are not validated."
   ],
   "auth": {
@@ -52,6 +52,18 @@
       "auth": "live read-only, requires explicit auth",
       "output": "JSON to stdout; malformed provider JSON is HCLOUD_BAD_JSON, never false empty"
     },
+    "radar": {
+      "usage": "radar [--category cost_optimized|regular_purpose|general_purpose|all] [--locations LOC1,LOC2,...] [--germany-only] [--arch any|x86|arm] [--types TYPE1,TYPE2,...] [--watch] [--interval SECS] [--jitter SECS] [--max-polls N]",
+      "auth": "live read-only, requires explicit auth",
+      "rules": [
+        "Sweeps live server-type stock and prices across target locations (default cost_optimized in fsn1,nbg1,hel1; --germany-only selects fsn1,nbg1).",
+        "Enforces rate-limit-safe watch bounds: --interval minimum 30s (default 60s, max 3600s), --jitter 0-60s (default 10s), --max-polls 1-120 when --watch is enabled (default 30).",
+        "Only confirmed available=true non-deprecated locations appear in available_matches and recommended_match; unknown availability never counts as open capacity.",
+        "Includes Fractional CTO tier rankings (cx43 -> cx33 -> cx23 -> cx53 -> cax31 -> cax21 -> cax11 -> cax41) and rescale compatibility doctrine."
+      ],
+      "output": "JSON {tool, version, checked_at, watch, filters, any_available, available_count, available_matches, recommended_match, matrix, cto_doctrine} to stdout; exit 0 on single sweep or when watch finds open stock, exit 3 when --watch completes with available_count=0",
+      "writes": "none"
+    },
     "server plan": {
       "usage": "server plan --name NAME --type TYPE --location LOC --image IMG --ssh-key KEY [--ssh-key KEY...] [--user-data FILE] [--label k=v ...] --out FILE",
       "auth": "offline (no auth needed); global --context if given is recorded as planned_context",
@@ -59,17 +71,17 @@
       "output": "JSON {ok:true, plan_hash, out, planned_context} to stdout"
     },
     "server preflight": {
-      "usage": "server preflight --plan FILE [--max-plan-age-hours H]",
+      "usage": "server preflight --plan FILE [--max-plan-age-hours H] [--allow-unavailable]",
       "auth": "live read-only, requires explicit auth; enforces planned_context then checks name/type/location/image/keys plus support/arch/deprecation/availability",
       "checks": ["name_available", "server_type_exists", "location_exists", "image_exists", "ssh_keys_exist", "location_supported", "location_available", "location_not_deprecated", "image_not_deprecated", "arch_compatible"],
       "schema": "Observed hcloud server_type.locations[] entries carry id,name,deprecation, with available/recommended added in newer versions. The adapter also tolerates a string location selector field. Image deprecation replaces the legacy deprecated boolean; datacenter endpoints were removed October 1, 2026.",
       "strictness": "All five list probes must return JSON arrays or the run fails HCLOUD_BAD_JSON (no false pass). Missing type locations[] or missing type/image architecture blocks. Duplicate image names resolve by type architecture; exact numeric image IDs pin and may fail incompatible.",
-      "capacity": "available=true is capacity indication, not guarantee; available=false means no capacity and blocks; missing available (hcloud 1.61) is labeled unknown, not true.",
+      "capacity": "available=true is capacity indication, not guarantee; available=false means catalog reports no capacity and blocks by default (pass --allow-unavailable to bypass catalog available=false while still enforcing all 9 other checks); missing available (hcloud 1.61 without REST enrichment) is labeled unknown.",
       "output": "JSON {passed, checks:[...], failures:[...]}; exit 3 when passed=false",
       "writes": "none"
     },
     "server create": {
-      "usage": "server create --plan FILE --plan-hash sha256:... --approve [--dry-run] [--receipt FILE] [--max-plan-age-hours H]",
+      "usage": "server create --plan FILE --plan-hash sha256:... --approve [--dry-run] [--receipt FILE] [--max-plan-age-hours H] [--allow-unavailable]",
       "auth": "live, requires explicit auth; enforces planned_context",
       "rules": [
         "Requires --approve plus nonempty formatted --plan-hash (sha256:<64 hex>) matching embedded plan_hash. Empty/malformed/None never bypasses (None legal only for offline preflight load).",
@@ -83,6 +95,18 @@
         "Receipt (if --receipt) is redacted JSON with plan_hash and digest only, no token, no user-data content; digests stay printable."
       ],
       "output": "Receipt JSON to stdout; optional receipt file (refuses to overwrite)."
+    },
+    "server snipe": {
+      "usage": "server snipe --plan FILE --plan-hash sha256:... --approve [--dry-run] [--receipt FILE] [--max-plan-age-hours H] [--allow-unavailable] [--interval SECS] [--jitter SECS] [--max-polls N]",
+      "auth": "live, requires explicit auth; enforces planned_context",
+      "rules": [
+        "Requires --approve plus nonempty formatted --plan-hash matching embedded plan_hash before any poll.",
+        "Enforces rate-limit-safe watch bounds: --interval minimum 30s (default 60s, max 3600s), --jitter 0-60s (default 10s), --max-polls 1-120 (default 30).",
+        "Aborts immediately on poll 1 with no write if any non-capacity preflight check fails (duplicate name, missing SSH key, unsupported location, deprecated image/type, or arch mismatch).",
+        "Requires confirmed location_available=true; unknown availability blocks rather than sniping.",
+        "The moment all 10 preflight checks pass, stops polling and executes at most one server create invocation (or stops before write if --dry-run) with full readback and receipt redaction."
+      ],
+      "output": "Receipt JSON (including snipe watch metadata) to stdout; optional receipt file (refuses to overwrite); exit 3 when capacity remains unavailable after max-polls."
     },
     "resources": {
       "usage": "resources",

@@ -1,13 +1,13 @@
 # Hetzner Cloud reference shelf
 
-Attached reference for module `legends-hetzner` v0.1.2. This shelf holds
+Attached reference for module `legends-hetzner` v0.1.3. This shelf holds
 generic, source-cited runbooks for agent-operated Hetzner Cloud work with
 the official `hcloud` CLI. It carries no private inventories, credentials,
 addresses, or customer data.
 
 ## How to use this shelf
 
-- Start with `onboarding.md`, then `auth-contexts.md`.
+- Start with `onboarding.md`, `auth-contexts.md`, and `cto-sizing-and-sniping.md`.
 - Each task runbook ends with what to record. Records belong in your own
   project locations, never in this reference copy.
 - Copy a file from `templates/` into your project and fill it there. The
@@ -20,6 +20,7 @@ addresses, or customer data.
 
 ## Contents
 
+- `cto-sizing-and-sniping.md`: Fractional CTO tier ladder (`CX23` -> `CX33` -> `CX43` -> `CX53`), `x86` vs `ARM64` (`CAX`), European `eu-central` (`fsn1`, `nbg1`, `hel1`) Cost-Optimized rules, in-place rescale mechanics, and rate-limit-safe sniping (`radar` and `server snipe`).
 - `onboarding.md`: install `hcloud` on Windows, macOS, Linux; first probes.
 - `auth-contexts.md`: tokens, named contexts, the wrapper auth rule.
 - `ssh-bootstrap.md`: SSH keys, cloud-init, rebuild access, verification.

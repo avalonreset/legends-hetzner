@@ -7,11 +7,14 @@
 - No wrapper commands for backups, snapshots, rebuilds, rescue,
   firewalls, networks, load balancers, DNS, volumes, images, or SSH key
   management. Use official surfaces directly.
-- Facts here were researched from official sources on 2026-10-09 (see
-  `sources.md`). Measured platform evidence is in `docs/VALIDATION.md`,
-  including the Windows live read-only pass with real `hcloud` 1.61.0.
+- Facts here were researched from official sources on 2026-10-09 and refreshed
+  on 2026-10-31 (see `sources.md`). Measured platform evidence is in
+  `docs/VALIDATION.md`, including the Windows live read-only pass with real
+  `hcloud` 1.61.0 and live `radar` stock sweeps.
 - Re-check `https://docs.hetzner.cloud/changelog` before release-grade
-  claims. Pricing, limits, and quotas are never asserted here.
+  claims. Relative tier sizing in `cto-sizing-and-sniping.md` is Fractional
+  CTO guidance; always read live per-location prices and availability via
+  `legends-hetzner radar` or `catalog` at decision time.
 - MCP: no official MCP identified in reviewed official sources as of
   2026-10-09 (org enumeration plus web search surfaced community projects
   only). Qualified inference, not exhaustive proof. No MCP is required,

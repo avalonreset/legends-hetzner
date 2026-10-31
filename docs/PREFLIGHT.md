@@ -47,8 +47,9 @@ must be quoted exactly.
 
 ## What to verify live before planning
 
-Use `catalog --kind server-types|locations|images|ssh-keys` with explicit
-auth and confirm:
+Use `radar` or `catalog --kind server-types|locations|images|ssh-keys` with
+explicit auth (see `docs/CTO-SIZING-AND-SNIPING.md` for Fractional CTO tier
+selection and rate-limit-safe sniping) and confirm:
 
 - The image is available for new servers and not deprecated. Debian 11 is
   deprecated and unavailable for new servers after 2026-11-30; Fedora 42

@@ -33,8 +33,10 @@ See the installed module's `docs/VALIDATION.md` for the bounded evidence.
 
 ## Verify live before planning
 
-`catalog --kind server-types|locations|images|ssh-keys` with explicit
-auth, then confirm: image available and not deprecated; type exists in
+Use `radar` or `catalog --kind server-types|locations|images|ssh-keys` with
+explicit auth (see `cto-sizing-and-sniping.md` for Fractional CTO tier
+selection and rate-limit-safe sniping), then confirm: image available and not
+deprecated; type exists in
 the chosen location (types are per location since 2025-09-24); location
 (name or ID) current (datacenter endpoints removed 2026-10-01,
 410 Gone); keys (names or IDs) exist in the project. See `api-changes.md`

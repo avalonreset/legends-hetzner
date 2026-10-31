@@ -7,7 +7,7 @@ Live server creation has a validated disposable Windows-client canary:
 create/readback, SSH, cloud-init and cleanup. See docs/VALIDATION.md for scope.
 """
 
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 PROVISION_SUPPORT = "live-canary-validated: Windows client, Ubuntu 24.04 server; see docs/VALIDATION.md"
 TOOL = "legends-hetzner"
 

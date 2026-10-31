@@ -317,8 +317,12 @@ def _is_deprecated(obj: dict) -> bool:
 
 
 def preflight(payload: dict, auth: Auth, hcloud_bin: str = "hcloud",
-              timeout: int | float | None = None, runner_json=run_json) -> dict:
+              timeout: int | float | None = None, runner_json=None,
+              *, require_known_availability: bool = False,
+              allow_unavailable: bool = False) -> dict:
     """Live read-only checks; no writes."""
+    if runner_json is None:
+        runner_json = run_json
     require_live_auth(auth)
     enforce_planned_context(payload, auth)
     checks: list[dict] = []
@@ -388,12 +392,23 @@ def preflight(payload: dict, auth: Auth, hcloud_bin: str = "hcloud",
     if loc_entry is not None:
         avail = loc_entry.get("available")
         if avail is False:
-            check("location_available", False,
-                  f"location {payload['location']!r} reports available=false for "
-                  f"{payload['server_type']!r} (no capacity).")
+            if allow_unavailable:
+                check("location_available", True,
+                      f"location {payload['location']!r} reports catalog available=false for "
+                      f"{payload['server_type']!r}, bypassed via --allow-unavailable to attempt "
+                      f"direct API placement.")
+            else:
+                check("location_available", False,
+                      f"location {payload['location']!r} reports available=false for "
+                      f"{payload['server_type']!r} (no capacity; pass --allow-unavailable to "
+                      f"attempt direct API placement anyway).")
         elif avail is True:
             check("location_available", True,
                   "available=true is capacity indication, not guarantee.")
+        elif require_known_availability and not allow_unavailable:
+            check("location_available", False,
+                  "availability unknown (hcloud without available field); "
+                  "snipe requires confirmed available=true capacity.")
         else:
             check("location_available", True,
                   "availability unknown (hcloud without available field); "
@@ -499,8 +514,9 @@ def _readback(selector: str, auth: Auth, hcloud_bin: str,
 
 def _receipt(payload: dict, plan_hash: str, status: str, dry_run: bool,
              preflight_result: dict | None, server: dict | None,
-             error: str | None, readback: dict | None, auth: Auth) -> dict:
-    return redact_obj({
+             error: str | None, readback: dict | None, auth: Auth,
+             snipe_meta: dict | None = None) -> dict:
+    raw = {
         "tool": TOOL,
         "version": __version__,
         "created_at": utcnow_iso(),
@@ -515,7 +531,10 @@ def _receipt(payload: dict, plan_hash: str, status: str, dry_run: bool,
         "readback": readback,
         "auth_source": auth.source if not auth.context else f"context:{auth.context}",
         "provision_support": PROVISION_SUPPORT,
-    })
+    }
+    if snipe_meta is not None:
+        raw["snipe"] = snipe_meta
+    return redact_obj(raw)
 
 
 def _write_receipt_file(receipt: dict, receipt_path: str | None) -> str | None:
@@ -541,8 +560,15 @@ def create_from_plan(plan_path: str, expected_hash: str, approve: bool, dry_run:
                      receipt_path: str | None, max_age_hours: float | None,
                      auth: Auth, hcloud_bin: str = "hcloud",
                      timeout: int | float | None = None,
-                     runner_json=run_json, runner=run) -> dict:
+                     runner_json=None, runner=None,
+                     *, allow_unavailable: bool = False,
+                     _preverified_flight: dict | None = None,
+                     _snipe_meta: dict | None = None) -> dict:
     """One CLI invocation; no client-side retry; honest uncertain handling."""
+    if runner_json is None:
+        runner_json = run_json
+    if runner is None:
+        runner = run
     if expected_hash is None or not str(expected_hash).strip():
         raise PlanError("PLAN_HASH_MISMATCH",
                         "Create requires nonempty --plan-hash matching the reviewed plan.")
@@ -552,20 +578,26 @@ def create_from_plan(plan_path: str, expected_hash: str, approve: bool, dry_run:
     require_live_auth(auth)
     enforce_planned_context(payload, auth)
     validate_receipt_path(receipt_path)
-    try:
-        flight = preflight(payload, auth, hcloud_bin, timeout, runner_json)
-    except HCloudError as exc:
-        receipt = _receipt(payload, plan_hash, "blocked", dry_run, None, None,
-                           redact_text(str(exc)), None, auth)
-        _write_receipt_file(receipt, receipt_path)
-        raise PreflightBlocked(f"Preflight probe failed: {exc}", []) from exc
+    if _preverified_flight is not None:
+        flight = _preverified_flight
+    else:
+        try:
+            flight = preflight(payload, auth, hcloud_bin, timeout, runner_json,
+                               allow_unavailable=allow_unavailable)
+        except HCloudError as exc:
+            receipt = _receipt(payload, plan_hash, "blocked", dry_run, None, None,
+                               redact_text(str(exc)), None, auth, snipe_meta=_snipe_meta)
+            _write_receipt_file(receipt, receipt_path)
+            raise PreflightBlocked(f"Preflight probe failed: {exc}", []) from exc
     if not flight["passed"]:
         receipt = _receipt(payload, plan_hash, "blocked", dry_run, flight, None,
-                           "Preflight failed; no write attempted.", None, auth)
+                           "Preflight failed; no write attempted.", None, auth,
+                           snipe_meta=_snipe_meta)
         _write_receipt_file(receipt, receipt_path)
         raise PreflightBlocked("Preflight failed; no write attempted.", flight["checks"])
     if dry_run:
-        receipt = _receipt(payload, plan_hash, "dry_run", True, flight, None, None, None, auth)
+        receipt = _receipt(payload, plan_hash, "dry_run", True, flight, None, None, None, auth,
+                           snipe_meta=_snipe_meta)
         _write_receipt_file(receipt, receipt_path)
         return receipt
 
@@ -606,22 +638,23 @@ def create_from_plan(plan_path: str, expected_hash: str, approve: bool, dry_run:
             status = _uncertain_status(readback)
             receipt = _receipt(payload, plan_hash, status, False, flight, None,
                                f"Create timed out; see readback (no false success): {detail}",
-                               readback, auth)
+                               readback, auth, snipe_meta=_snipe_meta)
             _write_receipt_file(receipt, receipt_path)
             raise UncertainError(status.upper(), receipt["error"], readback) from exc
         if readback.get("found") is True:
             receipt = _receipt(payload, plan_hash, "uncertain_exists", False, flight, None,
                                f"Create CLI failed but server exists; needs review: {detail}",
-                               readback, auth)
+                               readback, auth, snipe_meta=_snipe_meta)
             _write_receipt_file(receipt, receipt_path)
             raise UncertainError("UNCERTAIN_EXISTS", receipt["error"], readback) from exc
         if readback.get("found") is None:
             receipt = _receipt(payload, plan_hash, "uncertain_unknown", False, flight, None,
                                f"Create failed and readback inconclusive: {detail}",
-                               readback, auth)
+                               readback, auth, snipe_meta=_snipe_meta)
             _write_receipt_file(receipt, receipt_path)
             raise UncertainError("UNCERTAIN_UNKNOWN", receipt["error"], readback) from exc
-        receipt = _receipt(payload, plan_hash, "failed", False, flight, None, detail, readback, auth)
+        receipt = _receipt(payload, plan_hash, "failed", False, flight, None, detail, readback,
+                           auth, snipe_meta=_snipe_meta)
         _write_receipt_file(receipt, receipt_path)
         raise CreateError(exc.code, str(exc)) from exc
     finally:
@@ -638,7 +671,7 @@ def create_from_plan(plan_path: str, expected_hash: str, approve: bool, dry_run:
         status = _uncertain_status(readback)
         receipt = _receipt(payload, plan_hash, status, False, flight, None,
                            "Create returned invalid JSON; see readback (no false success).",
-                           readback, auth)
+                           readback, auth, snipe_meta=_snipe_meta)
         _write_receipt_file(receipt, receipt_path)
         raise UncertainError(status.upper(), receipt["error"], readback) from None
     server_obj = created.get("server") if isinstance(created, dict) else None
@@ -649,7 +682,7 @@ def create_from_plan(plan_path: str, expected_hash: str, approve: bool, dry_run:
         status = _uncertain_status(readback)
         receipt = _receipt(payload, plan_hash, status, False, flight, None,
                            "Create response lacked a server id; see readback (no false success).",
-                           readback, auth)
+                           readback, auth, snipe_meta=_snipe_meta)
         _write_receipt_file(receipt, receipt_path)
         raise UncertainError(status.upper(), receipt["error"], readback)
     readback = _readback(str(server_id), auth, hcloud_bin, timeout, runner_json,
@@ -658,10 +691,10 @@ def create_from_plan(plan_path: str, expected_hash: str, approve: bool, dry_run:
     if readback.get("found") is not True:
         receipt = _receipt(payload, plan_hash, "uncertain_unknown", False, flight,
                            redact_obj(server_obj), "Readback did not confirm create (no false success).",
-                           readback, auth)
+                           readback, auth, snipe_meta=_snipe_meta)
         _write_receipt_file(receipt, receipt_path)
         raise UncertainError("UNCERTAIN_UNKNOWN", receipt["error"], readback)
     receipt = _receipt(payload, plan_hash, "created", False, flight,
-                       redact_obj(server_obj), None, readback, auth)
+                       redact_obj(server_obj), None, readback, auth, snipe_meta=_snipe_meta)
     _write_receipt_file(receipt, receipt_path)
     return receipt

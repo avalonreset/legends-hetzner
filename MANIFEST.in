@@ -1,4 +1,4 @@
-include LICENSE README.md AGENTS.md SECURITY.md CHANGELOG.md THIRD_PARTY_NOTICES.md CONTRIBUTING.md SUPPORT.md
+include LICENSE README.md AGENTS.md SECURITY.md CHANGELOG.md THIRD_PARTY_NOTICES.md CONTRIBUTING.md SUPPORT.md CITATION.cff CODE_OF_CONDUCT.md
 recursive-include docs *.md *.json
 recursive-include knowledge *.md *.json
 recursive-include cloud-init *.yaml

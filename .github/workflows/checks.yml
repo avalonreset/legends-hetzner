@@ -53,7 +53,7 @@ jobs:
           base = files("legends_hetzner._data") / "knowledge" / "hetzner"
           pack = json.loads((base / "pack.json").read_text(encoding="utf-8"))
           assert pack["schema"] == "legends.knowledge-pack/v1"
-          assert len(pack["files"]) == 15, len(pack["files"])
+          assert len(pack["files"]) == 16, len(pack["files"])
           vault = base / "vault"
           ok = 0
           for item in pack["files"]:
@@ -63,7 +63,7 @@ jobs:
               digest = hashlib.sha256(target.read_bytes()).hexdigest()
               assert digest == item["sha256"], item["path"]
               ok += 1
-          print(f"resource smoke OK: all exists, {ok}/15 pack hashes")
+          print(f"resource smoke OK: all exists, {ok}/16 pack hashes")
           EOF
 
   empire-attachment:

@@ -1,7 +1,8 @@
-# Validation for 0.1.2
+# Validation for 0.1.3
 
-Observed 2026-10-09. These results describe tested behavior, not a guarantee
-for every provider account, OS release or future API response.
+Observed 2026-10-09 and updated 2026-10-31. These results describe tested
+behavior, not a guarantee for every provider account, OS release or future API
+response.
 
 ## Platform and package checks
 
@@ -12,8 +13,10 @@ release scan, tests, wheel/source builds, wheel installation outside the
 checkout, resource discovery and all 15 knowledge-file hashes.
 See the [verified matrix run](https://github.com/avalonreset/legends-hetzner/actions/runs/37949396480).
 
-For the 0.1.2 candidate, all 148 tests and the public release scan passed
-again on Windows. Final release checks are recorded in the repository's
+For the 0.1.3 candidate, the expanded test suite (covering `radar`, `server snipe`,
+rate-limit interval bounds, and REST server-type availability enrichment for
+`hcloud 1.61.0`), knowledge-pack attachment checks, and the public release scan
+passed on Windows. Final release checks are recorded in the repository's
 checks workflow.
 
 Separate native fleet checks exercised an isolated wheel installation:

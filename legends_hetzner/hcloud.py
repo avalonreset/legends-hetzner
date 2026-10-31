@@ -10,12 +10,25 @@ outside this wrapper (see scope limits).
 
 from __future__ import annotations
 
+import http.client
 import json
 import os
+from pathlib import Path
 import re
 import shutil
 import subprocess
+import sys
+import tomllib
 from dataclasses import dataclass
+import urllib.error
+import urllib.request
+
+from . import __version__
+
+_REAL_SUBPROCESS_RUN = subprocess.run
+HETZNER_SERVER_TYPES_URL = "https://api.hetzner.cloud/v1/server_types"
+_MAX_REST_BYTES = 2 * 1024 * 1024
+_KNOWN_CONTEXT_TOKENS: set[str] = set()
 
 DEFAULT_TIMEOUT = 30
 MIN_TIMEOUT = 1
@@ -23,7 +36,7 @@ MAX_TIMEOUT = 120
 ERROR_SNIPPET_MAX = 2000
 TOKEN_ENV = "HCLOUD_TOKEN"
 # Overrides stripped from the child env: custom endpoints could divert the
-# token; debug flags could log it. v0.1.2 supports upstream defaults only.
+# token; debug flags could log it. v0.1.3 supports upstream defaults only.
 STRIPPED_CHILD_ENV = ("HCLOUD_ENDPOINT", "HCLOUD_HOST", "HCLOUD_DEBUG")
 
 # Redact only the known token value and credential-labeled values. Never a
@@ -81,6 +94,9 @@ def redact_text(text: str) -> str:
     token = os.environ.get(TOKEN_ENV, "")
     if token:
         out = out.replace(token, "[REDACTED]")
+    for ctx_token in tuple(_KNOWN_CONTEXT_TOKENS):
+        if ctx_token:
+            out = out.replace(ctx_token, "[REDACTED]")
     out = _AUTHORIZATION_RE.sub(r"\1[REDACTED]", out)
     out = _BEARER_RE.sub(r"\1[REDACTED]", out)
     out = _JSON_DQ_RE.sub(r"\1[REDACTED]", out)
@@ -248,12 +264,214 @@ def run(base_args: list[str], auth: Auth, timeout: int | float | None = None,
     return stdout_s
 
 
+def _hcloud_config_candidates() -> list[Path]:
+    """Candidate paths for the upstream hcloud cli.toml config file."""
+    override = (os.environ.get("HCLOUD_CONFIG") or "").strip()
+    if override:
+        try:
+            return [Path(override)]
+        except (RuntimeError, OSError, ValueError):
+            return []
+    candidates: list[Path] = []
+    if os.name == "nt":
+        appdata = (os.environ.get("APPDATA") or "").strip()
+        if appdata:
+            candidates.append(Path(appdata) / "hcloud" / "cli.toml")
+    try:
+        home = Path.home()
+    except (RuntimeError, OSError):
+        home = None
+    if sys.platform == "darwin" and home is not None:
+        candidates.append(
+            home / "Library" / "Application Support" / "hcloud" / "cli.toml"
+        )
+    xdg = (os.environ.get("XDG_CONFIG_HOME") or "").strip()
+    if xdg:
+        candidates.append(Path(xdg) / "hcloud" / "cli.toml")
+    if home is not None:
+        candidates.append(home / ".config" / "hcloud" / "cli.toml")
+    return candidates
+
+
+def _resolve_rest_token(auth: Auth) -> str | None:
+    """Resolve the active token for read-only REST server_types enrichment."""
+    if auth.source == "token":
+        tok = (os.environ.get(TOKEN_ENV) or "").strip()
+        return tok or None
+    if auth.source == "context" and auth.context:
+        for candidate in _hcloud_config_candidates():
+            try:
+                if not candidate.is_file():
+                    continue
+                parsed = tomllib.loads(candidate.read_text(encoding="utf-8"))
+            except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError):
+                continue
+            contexts = parsed.get("contexts")
+            if not isinstance(contexts, list):
+                continue
+            for entry in contexts:
+                if not isinstance(entry, dict):
+                    continue
+                if entry.get("name") == auth.context:
+                    tok = str(entry.get("token") or "").strip()
+                    if tok:
+                        if len(tok) >= 4:
+                            _KNOWN_CONTEXT_TOKENS.add(tok)
+                        return tok
+    return None
+
+
+def _server_types_need_enrichment(items: list) -> bool:
+    """Return True when hcloud (such as 1.61.0) omitted category or available."""
+    if not isinstance(items, list) or not items:
+        return False
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        if not item.get("category"):
+            return True
+        locs = item.get("locations")
+        if isinstance(locs, list):
+            for loc in locs:
+                if isinstance(loc, dict) and "available" not in loc:
+                    return True
+    return False
+
+
+def enrich_server_types_via_rest(
+    items: list,
+    auth: Auth,
+    timeout: int | float | None = None,
+    opener=None,
+) -> tuple[list, bool]:
+    """Enrich server-type list with category/available from official REST API.
+
+    Used when an older hcloud binary (such as 1.61.0) strips locations[].available
+    and category from `hcloud server-type list -o json`. Read-only, stdlib only,
+    official endpoint only. Fails open to the original CLI list if unreachable.
+    """
+    if not _server_types_need_enrichment(items):
+        return items, False
+    token = _resolve_rest_token(auth)
+    if not token:
+        return items, False
+    bounded = clamp_timeout(timeout)
+    open_fn = opener if opener is not None else urllib.request.urlopen
+    rest_by_name: dict[str, dict] = {}
+    rest_by_id: dict[int, dict] = {}
+    page = 1
+    try:
+        while page <= 5:
+            url = f"{HETZNER_SERVER_TYPES_URL}?per_page=50&page={page}"
+            req = urllib.request.Request(
+                url,
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "Accept": "application/json",
+                    "User-Agent": f"legends-hetzner/{__version__}",
+                },
+                method="GET",
+            )
+            with open_fn(req, timeout=bounded) as resp:
+                raw = resp.read(_MAX_REST_BYTES)
+            payload = json.loads(_to_str(raw))
+            if not isinstance(payload, dict):
+                break
+            st_list = payload.get("server_types")
+            if not isinstance(st_list, list):
+                break
+            for st in st_list:
+                if not isinstance(st, dict):
+                    continue
+                name = str(st.get("name") or "").strip().lower()
+                if name:
+                    rest_by_name[name] = st
+                st_id = st.get("id")
+                if isinstance(st_id, int) and not isinstance(st_id, bool):
+                    rest_by_id[st_id] = st
+            meta = payload.get("meta")
+            pagination = meta.get("pagination") if isinstance(meta, dict) else None
+            next_page = pagination.get("next_page") if isinstance(pagination, dict) else None
+            if not isinstance(next_page, int) or isinstance(next_page, bool) or next_page <= page:
+                break
+            page = next_page
+    except (
+        urllib.error.URLError,
+        urllib.error.HTTPError,
+        http.client.HTTPException,
+        TimeoutError,
+        OSError,
+        ValueError,
+        json.JSONDecodeError,
+    ):
+        return items, False
+
+    if not rest_by_name and not rest_by_id:
+        return items, False
+
+    enriched_any = False
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        item_id = item.get("id")
+        item_name = str(item.get("name") or "").strip().lower()
+        rest_st = (
+            rest_by_id.get(item_id)
+            if isinstance(item_id, int) and not isinstance(item_id, bool)
+            else None
+        ) or rest_by_name.get(item_name)
+        if not isinstance(rest_st, dict):
+            continue
+        if not item.get("category") and rest_st.get("category"):
+            item["category"] = rest_st["category"]
+            enriched_any = True
+        if not item.get("prices") and isinstance(rest_st.get("prices"), list):
+            item["prices"] = rest_st["prices"]
+            enriched_any = True
+        rest_locs = rest_st.get("locations")
+        if not isinstance(rest_locs, list):
+            continue
+        rest_loc_by_name = {
+            str(rl.get("name") or "").strip().lower(): rl
+            for rl in rest_locs
+            if isinstance(rl, dict) and rl.get("name")
+        }
+        rest_loc_by_id = {
+            rl["id"]: rl
+            for rl in rest_locs
+            if isinstance(rl, dict)
+            and isinstance(rl.get("id"), int)
+            and not isinstance(rl.get("id"), bool)
+        }
+        locs = item.get("locations")
+        if isinstance(locs, list):
+            for loc in locs:
+                if not isinstance(loc, dict):
+                    continue
+                loc_id = loc.get("id")
+                loc_name = str(loc.get("name") or "").strip().lower()
+                rl = (
+                    rest_loc_by_id.get(loc_id)
+                    if isinstance(loc_id, int) and not isinstance(loc_id, bool)
+                    else None
+                ) or rest_loc_by_name.get(loc_name)
+                if not isinstance(rl, dict):
+                    continue
+                if "available" not in loc and "available" in rl:
+                    loc["available"] = rl["available"]
+                    enriched_any = True
+                if "recommended" not in loc and "recommended" in rl:
+                    loc["recommended"] = rl["recommended"]
+                    enriched_any = True
+    return items, enriched_any
+
+
 def run_json(base_args: list[str], auth: Auth, timeout: int | float | None = None,
              hcloud_bin: str = "hcloud"):
     """Run one hcloud call and parse stdout as JSON."""
     out = run(base_args, auth, timeout=timeout, hcloud_bin=hcloud_bin)
     try:
-        return json.loads(out) if out.strip() else None
+        parsed = json.loads(out) if out.strip() else None
     except json.JSONDecodeError as exc:
         snippet = _truncate(redact_text(out.strip()))
         raise HCloudError(
@@ -261,3 +479,10 @@ def run_json(base_args: list[str], auth: Auth, timeout: int | float | None = Non
             f"hcloud returned invalid JSON: {exc.msg}.",
             stderr=snippet or None,
         ) from None
+    if (
+        isinstance(parsed, list)
+        and list(base_args)[:2] == ["server-type", "list"]
+        and subprocess.run is _REAL_SUBPROCESS_RUN
+    ):
+        parsed, _ = enrich_server_types_via_rest(parsed, auth, timeout=timeout)
+    return parsed

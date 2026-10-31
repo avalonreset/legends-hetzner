@@ -1,8 +1,8 @@
 # legends-hetzner agent instructions
 
-Read `docs/AGENT-RECIPE.md`, then the smallest relevant runbook in
-`knowledge/hetzner/vault/`. Run offline readiness before using the CLI and
-live readiness before authorized provider operations.
+Read `docs/AGENT-RECIPE.md` and `docs/CTO-SIZING-AND-SNIPING.md`, then the
+smallest relevant runbook in `knowledge/hetzner/vault/`. Run offline readiness
+before using the CLI and live readiness before authorized provider operations.
 
 Never copy private inventories, credentials, machine identities or generated
 operational receipts into this repository.

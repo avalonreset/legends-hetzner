@@ -1,6 +1,6 @@
 # Honest limitations
 
-What v0.1.2 does not do, what is untested, and where to check instead.
+What v0.1.3 does not do, what is untested, and where to check instead.
 
 ## Provisioning
 
@@ -11,21 +11,24 @@ What v0.1.2 does not do, what is untested, and where to check instead.
   See `docs/VALIDATION.md`.
 - The wrapper has no commands for backups, snapshots, rebuilds, rescue,
   firewalls, networks, load balancers, DNS, volumes, images, or SSH key
-  management in v0.1.2. Those operations stay on their official surfaces:
+  management in v0.1.3. Those operations stay on their official surfaces:
   Console, API, or `hcloud` directly.
 
 ## Evidence status
 
 - The install steps, CLI behavior, and product facts in these docs were
-  researched from official sources on 2026-10-09 (see `docs/SOURCES.md`).
+  researched from official sources on 2026-10-09 and refreshed on 2026-10-31
+  (see `docs/SOURCES.md`).
   Measured platform evidence is in `docs/VALIDATION.md`, including the
   Windows pass with Python 3.11.7 and real `hcloud` 1.61.0 (offline and
-  live readiness, inventory, all catalog reads).
+  live readiness, inventory, all catalog reads, and live `radar` stock
+  sweeps).
 - Changelog facts are current to the October 2026 entries observed. Always
   re-check `https://docs.hetzner.cloud/changelog` before release-grade
   claims.
-- Pricing, limits, and quotas are deliberately not asserted anywhere in
-  this module. Check the official pages at decision time.
+- Relative tier sizing in `docs/CTO-SIZING-AND-SNIPING.md` reflects
+  Fractional CTO guidance; always read live per-location prices and
+  availability through `legends-hetzner radar` or `catalog` at decision time.
 
 ## MCP
 

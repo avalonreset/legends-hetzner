@@ -10,6 +10,7 @@ import sys
 from . import PROVISION_SUPPORT, __version__
 from . import doctor as doctor_mod
 from . import inventory as inv_mod
+from . import radar as radar_mod
 from . import resources as resources_mod
 from . import servers as servers_mod
 from .hcloud import HCloudError, resolve_auth
@@ -40,7 +41,11 @@ def _code_to_exit(code: str) -> int:
     if code in ("PLAN_INVALID", "PLAN_TAMPERED", "PLAN_STALE", "PLAN_HASH_MISMATCH",
                 "PLAN_VERSION", "PLAN_NOT_FOUND", "PLAN_EXISTS", "PLAN_CONTEXT_MISMATCH",
                 "NEED_APPROVAL", "AUTH_AMBIGUOUS", "AUTH_LEAK_REFUSED",
-                "USERDATA_INVALID", "RECEIPT_EXISTS", "RECEIPT_PATH_INVALID"):
+                "USERDATA_INVALID", "RECEIPT_EXISTS", "RECEIPT_PATH_INVALID",
+                "RADAR_INVALID_FILTER", "RADAR_INVALID_INTERVAL",
+                "RADAR_INTERVAL_TOO_LOW", "RADAR_INVALID_JITTER",
+                "RADAR_JITTER_OUT_OF_RANGE", "RADAR_WATCH_REQUIRED",
+                "RADAR_POLLS_OUT_OF_RANGE"):
         return EXIT_USAGE
     if code in ("USERDATA_INVALID",):
         return EXIT_USAGE
@@ -76,7 +81,60 @@ def build_parser() -> argparse.ArgumentParser:
     catalog_p.add_argument("--kind", default="all",
                            choices=["all", "server-types", "locations", "images", "ssh-keys"])
 
-    server_p = sub.add_parser("server", help="Plan, preflight, and create servers.")
+    radar_p = sub.add_parser(
+        "radar",
+        help="Sweep live server-type stock and CTO tier recommendations (read-only).",
+    )
+    radar_p.add_argument(
+        "--category",
+        default="cost_optimized",
+        choices=["cost_optimized", "regular_purpose", "general_purpose", "all"],
+    )
+    radar_p.add_argument(
+        "--locations",
+        default=None,
+        help="Comma-separated locations (default fsn1,nbg1,hel1).",
+    )
+    radar_p.add_argument(
+        "--germany-only",
+        action="store_true",
+        help="Restrict locations to Germany (fsn1,nbg1).",
+    )
+    radar_p.add_argument(
+        "--arch",
+        default="any",
+        choices=["any", "x86", "arm"],
+    )
+    radar_p.add_argument(
+        "--types",
+        default=None,
+        help="Comma-separated server types in priority order.",
+    )
+    radar_p.add_argument(
+        "--watch",
+        action="store_true",
+        help="Poll at safe jittered intervals (>=30s) until stock opens.",
+    )
+    radar_p.add_argument(
+        "--interval",
+        type=int,
+        default=60,
+        help="Seconds between watch polls (30-3600, default 60).",
+    )
+    radar_p.add_argument(
+        "--jitter",
+        type=int,
+        default=10,
+        help="Random positive jitter seconds (0-60, default 10).",
+    )
+    radar_p.add_argument(
+        "--max-polls",
+        type=int,
+        default=None,
+        help="Maximum polls when watching (1-120, default 30).",
+    )
+
+    server_p = sub.add_parser("server", help="Plan, preflight, create, and snipe servers.")
     server_sub = server_p.add_subparsers(dest="server_command", required=True)
 
     plan_p = server_sub.add_parser("plan", help="Write an immutable reviewed plan file (offline).")
@@ -92,6 +150,11 @@ def build_parser() -> argparse.ArgumentParser:
     preflight_p = server_sub.add_parser("preflight", help="Live read-only plan checks (no writes).")
     preflight_p.add_argument("--plan", required=True)
     preflight_p.add_argument("--max-plan-age-hours", type=float, default=24)
+    preflight_p.add_argument(
+        "--allow-unavailable",
+        action="store_true",
+        help="Bypass catalog available=false when all 9 other preflight checks pass.",
+    )
 
     create_p = server_sub.add_parser("create", help="Preflight then one create invocation.",
                                      epilog=_CREATE_EPILOG)
@@ -101,6 +164,31 @@ def build_parser() -> argparse.ArgumentParser:
     create_p.add_argument("--dry-run", action="store_true")
     create_p.add_argument("--receipt", default=None)
     create_p.add_argument("--max-plan-age-hours", type=float, default=24)
+    create_p.add_argument(
+        "--allow-unavailable",
+        action="store_true",
+        help="Attempt direct API placement via hcloud even if catalog reports available=false.",
+    )
+
+    snipe_p = server_sub.add_parser(
+        "snipe",
+        help="Watch capacity at safe intervals (>=30s) then run one guarded create when open.",
+        epilog=_CREATE_EPILOG,
+    )
+    snipe_p.add_argument("--plan", required=True)
+    snipe_p.add_argument("--plan-hash", required=True)
+    snipe_p.add_argument("--approve", action="store_true")
+    snipe_p.add_argument("--dry-run", action="store_true")
+    snipe_p.add_argument("--receipt", default=None)
+    snipe_p.add_argument("--max-plan-age-hours", type=float, default=24)
+    snipe_p.add_argument(
+        "--allow-unavailable",
+        action="store_true",
+        help="Attempt direct API placement immediately even if catalog reports available=false.",
+    )
+    snipe_p.add_argument("--interval", type=int, default=60, help="Seconds between capacity polls (30-3600, default 60).")
+    snipe_p.add_argument("--jitter", type=int, default=10, help="Random positive jitter seconds (0-60, default 10).")
+    snipe_p.add_argument("--max-polls", type=int, default=30, help="Maximum capacity polls before aborting (1-120, default 30).")
 
     sub.add_parser("resources", help="Show absolute recipe/pack paths (offline).")
     return parser
@@ -155,6 +243,30 @@ def main(argv: list[str] | None = None) -> int:
         except HCloudError as exc:
             return _fail(exc.code, str(exc), exc.stderr)
 
+    if args.command == "radar":
+        try:
+            auth = resolve_auth(args.context)
+            report = radar_mod.run_radar(
+                auth,
+                category=args.category,
+                locations=args.locations,
+                germany_only=args.germany_only,
+                arch=args.arch,
+                types=args.types,
+                watch=args.watch,
+                interval=args.interval,
+                jitter=args.jitter,
+                max_polls=args.max_polls,
+                hcloud_bin=hcloud_bin,
+                timeout=timeout,
+            )
+            _print_json(report)
+            if args.watch and not report.get("any_available"):
+                return EXIT_PREFLIGHT
+            return 0
+        except HCloudError as exc:
+            return _fail(exc.code, str(exc), getattr(exc, "stderr", None))
+
     if args.command == "server":
         if args.server_command == "plan":
             try:
@@ -175,7 +287,10 @@ def main(argv: list[str] | None = None) -> int:
             try:
                 auth = resolve_auth(args.context)
                 payload, _ = servers_mod.load_plan(args.plan, None, args.max_plan_age_hours)
-                result = servers_mod.preflight(payload, auth, hcloud_bin, timeout)
+                result = servers_mod.preflight(
+                    payload, auth, hcloud_bin, timeout,
+                    allow_unavailable=args.allow_unavailable,
+                )
                 _print_json(result)
                 return 0 if result.get("passed") else EXIT_PREFLIGHT
             except HCloudError as exc:
@@ -185,7 +300,8 @@ def main(argv: list[str] | None = None) -> int:
                 auth = resolve_auth(args.context)
                 receipt = servers_mod.create_from_plan(
                     args.plan, args.plan_hash, args.approve, args.dry_run,
-                    args.receipt, args.max_plan_age_hours, auth, hcloud_bin, timeout)
+                    args.receipt, args.max_plan_age_hours, auth, hcloud_bin, timeout,
+                    allow_unavailable=args.allow_unavailable)
                 _print_json(receipt)
                 return 0
             except servers_mod.PreflightBlocked as exc:
@@ -195,6 +311,45 @@ def main(argv: list[str] | None = None) -> int:
                 return EXIT_PREFLIGHT
             except servers_mod.UncertainError as exc:
                 return _fail(exc.code, str(exc))
+            except servers_mod.CreateError as exc:
+                rc = _fail(exc.code, str(exc), getattr(exc, "stderr", None))
+                if exc.code not in ("RECEIPT_EXISTS", "RECEIPT_PATH_INVALID"):
+                    return EXIT_CREATE
+                return rc
+            except HCloudError as exc:
+                return _fail(exc.code, str(exc), getattr(exc, "stderr", None))
+        if args.server_command == "snipe":
+            try:
+                auth = resolve_auth(args.context)
+                receipt = radar_mod.snipe_from_plan(
+                    args.plan,
+                    args.plan_hash,
+                    args.approve,
+                    args.dry_run,
+                    args.receipt,
+                    args.max_plan_age_hours,
+                    auth,
+                    allow_unavailable=args.allow_unavailable,
+                    interval=args.interval,
+                    jitter=args.jitter,
+                    max_polls=args.max_polls,
+                    hcloud_bin=hcloud_bin,
+                    timeout=timeout,
+                )
+                _print_json(receipt)
+                return 0
+            except servers_mod.PreflightBlocked as exc:
+                sys.stderr.write(f"error [PREFLIGHT_BLOCKED] {exc}\n")
+                for check in exc.checks:
+                    sys.stderr.write(f" - {check['check']}: {check['detail']}\n")
+                return EXIT_PREFLIGHT
+            except servers_mod.UncertainError as exc:
+                return _fail(exc.code, str(exc))
+            except servers_mod.CreateError as exc:
+                rc = _fail(exc.code, str(exc), getattr(exc, "stderr", None))
+                if exc.code not in ("RECEIPT_EXISTS", "RECEIPT_PATH_INVALID"):
+                    return EXIT_CREATE
+                return rc
             except HCloudError as exc:
                 return _fail(exc.code, str(exc), getattr(exc, "stderr", None))
     parser.print_help(sys.stderr)

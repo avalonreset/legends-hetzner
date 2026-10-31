@@ -1,8 +1,9 @@
 # `legends-hetzner` agent recipe (canonical)
 
-Module `legends-hetzner` v0.1.2. Agent-operated Hetzner Cloud workflows that
-wrap the official `hcloud` CLI with reviewed plans, read-only preflight, and
-a source-cited reference library.
+Module `legends-hetzner` v0.1.3. Agent-operated Hetzner Cloud workflows that
+wrap the official `hcloud` CLI with reviewed plans, read-only preflight,
+Cost-Optimized stock radar and rate-limit-safe sniping, and a source-cited
+reference library.
 
 The only registered skill is `cto-legends`. This file is the canonical task
 instruction for the module. No standalone module skill exists or is required.
@@ -11,9 +12,10 @@ No MCP server is required; see `docs/LIMITATIONS.md` for the MCP finding.
 Read first, in order:
 
 1. `docs/CLI-CONTRACT.json` (exact CLI syntax, source of truth)
-2. `docs/LIMITATIONS.md` (what v0.1.2 does not do)
-3. `docs/SOURCES.md` (source ledger with dates and URLs)
-4. The runbook for the task at hand (list below)
+2. `docs/CTO-SIZING-AND-SNIPING.md` (Fractional CTO hardware selection, x86 vs ARM64, tier ladder, rescale rules, and rate-limit-safe sniping)
+3. `docs/LIMITATIONS.md` (what v0.1.3 does not do)
+4. `docs/SOURCES.md` (source ledger with dates and URLs)
+5. The runbook for the task at hand (list below)
 
 ## Runtime shape
 
@@ -53,9 +55,11 @@ Global flags: `--context NAME`, `--timeout SECS` (default 30, range 1-120),
 | `doctor --live` | live read-only | Read-only probe via location list. JSON to stdout. |
 | `inventory` | live read-only | `{"servers": [...], "count": n}` JSON to stdout. |
 | `catalog [--kind all\|server-types\|locations\|images\|ssh-keys]` | live read-only | Live catalog snapshot. JSON to stdout. |
+| `radar [--category cost_optimized\|regular_purpose\|general_purpose\|all] [--locations LOCS] [--germany-only] [--arch any\|x86\|arm] [--types TYPES] [--watch] [--interval SECS] [--jitter SECS] [--max-polls N]` | live read-only | Sweeps live server-type stock, prices, and Fractional CTO tier recommendations (default `cost_optimized` in `fsn1,nbg1,hel1`). With `--watch`, polls at safe jittered intervals (`>= 30`s) and exits 0 when stock opens or 3 when no match opens. |
 | `server plan --name NAME --type TYPE --location LOC --image IMG --ssh-key KEY [--ssh-key KEY...] [--user-data FILE] [--label k=v ...] --out FILE` | offline | Writes an immutable plan file `{plan: {...}, plan_hash: sha256:...}`. SSH key required (names or numeric IDs). Records `planned_context` and snapshots reviewed user-data bytes with digest. Refuses to overwrite `--out`. User data at most 32768 bytes and must start with `#cloud-config` or `#!/`. Plans may contain plaintext bootstrap config: keep private, no secrets. |
 | `server preflight --plan FILE [--max-plan-age-hours H]` | live read-only | Verifies plan hash, planned context, digest, and age, then checks name, type, location, image, and keys. No writes. |
 | `server create --plan FILE --plan-hash sha256:... --approve [--dry-run] [--receipt FILE] [--max-plan-age-hours H]` | live | Requires `--approve` plus a matching `--plan-hash`. Single CLI invocation; the wrapper never retries (upstream `hcloud` may perform internal retries). Uncertain results are reported honestly with nonzero exit. Receipts are redacted. `--dry-run` runs preflight only. |
+| `server snipe --plan FILE --plan-hash sha256:... --approve [--dry-run] [--receipt FILE] [--max-plan-age-hours H] [--interval SECS] [--jitter SECS] [--max-polls N]` | live | Rate-limit-safe sniper (`--interval >= 30`s, bounded `--max-polls 1..120`). Aborts immediately on poll 1 if any non-capacity preflight check fails; polls read-only while `location_available` is `false`; executes at most one `server create` invocation the moment confirmed `available=true` capacity opens. |
 | `resources` | offline | Resolves recipe, pack, cloud-init, and skill paths. JSON with absolute paths. |
 
 Exit codes: 0 success (including passing dry-run; `doctor` only when
@@ -85,7 +89,7 @@ contract file wins. Never invent wrapper flags.
    and cannot be injected into existing servers by Hetzner. Verify access and
    cloud-init completion before declaring success.
 5. Backups and restore: `docs/BACKUPS.md`. The wrapper has no backup or
-   snapshot commands in v0.1.2; use the Console, the API, or `hcloud`
+   snapshot commands in v0.1.3; use the Console, the API, or `hcloud`
    directly, and prove restores with a rehearsal, not with backup existence.
 6. Knowledge: `docs/KNOWLEDGE-PACK.md`. The attachable pack is
    `knowledge/hetzner/pack.json` (schema `legends.knowledge-pack/v1`).
@@ -94,6 +98,7 @@ contract file wins. Never invent wrapper flags.
 
 ## Runbook index
 
+- `docs/CTO-SIZING-AND-SNIPING.md`: Fractional CTO tier ladder (`CX23` -> `CX33` -> `CX43` -> `CX53`), `x86` vs `ARM64` (`CAX`), European `eu-central` (`fsn1`, `nbg1`, `hel1`) Cost-Optimized rules, in-place rescale mechanics, and rate-limit-safe sniping (`radar` and `server snipe`).
 - `docs/ONBOARDING.md`: generic setup on Windows, macOS, and Linux.
 - `docs/AUTH.md`: tokens, named contexts, multi-project use, token safety.
 - `docs/SSH-BOOTSTRAP.md`: SSH keys, cloud-init specifics, rebuild access,

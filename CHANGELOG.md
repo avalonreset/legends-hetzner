@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.3 - 2026-10-31
+
+- Add `legends-hetzner radar` for read-only Cost-Optimized (`CX`/`CAX`) stock sweeps across `fsn1`, `nbg1`, and `hel1`, Fractional CTO tier ranking (`cx43` -> `cx33` -> `cx23` -> `cx53`), and rate-limit-safe watch polling (`--interval >= 30`s with random jitter and bounded `--max-polls`).
+- Add `legends-hetzner server snipe` to watch capacity for a reviewed, hash-pinned plan at safe jittered intervals (`>= 30`s), fail fast on any non-capacity preflight issue, and execute at most one `hcloud server create` invocation when confirmed `available=true` stock opens.
+- Add automatic read-only REST server-type availability enrichment (`GET /v1/server_types`) when running against older `hcloud` binaries (such as `1.61.0`) that omit `locations[].available` and `category` from `hcloud server-type list -o json`.
+- Ship Fractional CTO hardware selection and sniping documentation in `docs/CTO-SIZING-AND-SNIPING.md` and `knowledge/hetzner/vault/cto-sizing-and-sniping.md` covering `x86` (`CX`) vs `ARM64` (`CAX`), European `eu-central` budget locations, the `CX23` -> `CX33` -> `CX43` -> `CX53` ladder, 4 GB swapfile guidance for starter seats, single-box consolidation, and in-place rescale rules.
+
 ## 0.1.2 - 2026-10-29
 
 - Raise minimum supported Python runtime to Python 3.11 (`requires-python = ">=3.11"`) across package metadata, offline `doctor` checks, `scripts/check_release.py`, knowledge pack docs, and multi-OS CI.
