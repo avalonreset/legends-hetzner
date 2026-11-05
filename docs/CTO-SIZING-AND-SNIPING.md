@@ -1,14 +1,14 @@
 # Fractional CTO sizing and rate-limit-safe sniping
 
 This guide captures the Fractional CTO hardware selection doctrine and the
-rate-limit-safe stock-sniping workflow built into `legends-hetzner` v0.1.3.
+rate-limit-safe stock-sniping workflow built into `legends-hetzner` v0.1.4.
 For exact CLI flags and exit codes, `docs/CLI-CONTRACT.json` is authoritative.
 
 ## 1. Why the Cost-Optimized line is the primary target
 
 Hetzner Cloud organizes server types into three categories (`server_types[].category`):
 
-1. **`cost_optimized` (`CX23`–`CX53` x86 and `CAX11`–`CAX41` ARM64):**
+1. **`cost_optimized` (`CX23`-`CX53` x86 and `CAX11`-`CAX41` ARM64):**
    The highest price-to-performance cloud tiers Hetzner offers.
 2. **`regular_purpose` (`CPX` shared vCPU):**
    Available across all regions, but typically costs more than 2x per GB of
@@ -23,11 +23,11 @@ Hetzner Cloud organizes server types into three categories (`server_types[].cate
 Hetzner offers the `cost_optimized` (`CX` and `CAX`) line **only** in three
 European locations:
 
-- **Falkenstein, Germany (`fsn1`)** — Flagship German campus; lowest central
+- **Falkenstein, Germany (`fsn1`)** - Flagship German campus; lowest central
   European latency and highest capacity demand.
-- **Nuremberg, Germany (`nbg1`)** — Second German campus; identical German
+- **Nuremberg, Germany (`nbg1`)** - Second German campus; identical German
   jurisdiction and network profile to `fsn1`.
-- **Helsinki, Finland (`hel1`)** — Modern Nordic campus; frequently has open
+- **Helsinki, Finland (`hel1`)** - Modern Nordic campus; frequently has open
   `cost_optimized` seats when `fsn1` and `nbg1` are temporarily sold out.
 
 US (`ash`, `hil`) and Singapore (`sin`) locations do not carry the
@@ -41,10 +41,10 @@ Both `CX` (Intel/AMD `x86`) and `CAX` (Ampere Altra `arm`) belong to the
 `cost_optimized` category and share the same vCPU, RAM, and NVMe step sizes
 (2/4/8/16 vCPU and 4/8/16/32 GB RAM).
 
-### Why `x86` (`CX23`–`CX53`) is the default recommendation
+### Why `x86` (`CX23`-`CX53`) is the default recommendation
 
-1. **Lower monthly cost at every tier:** In the current `CX23`–`CX53`
-   generation, the `x86` tiers are priced below the `CAX11`–`CAX41` ARM64
+1. **Lower monthly cost at every tier:** In the current `CX23`-`CX53`
+   generation, the `x86` tiers are priced below the `CAX11`-`CAX41` ARM64
    tiers at every single size step. Always inspect live project pricing via
    `legends-hetzner radar`.
 2. **Universal `linux/amd64` compatibility:** Every prebuilt Docker image,
@@ -55,7 +55,7 @@ Both `CX` (Intel/AMD `x86`) and `CAX` (Ampere Altra `arm`) belong to the
    within the **same CPU architecture**. Starting on `cx23` preserves a
    direct, zero-migration upgrade path up to `cx33`, `cx43`, and `cx53`.
 
-### When `ARM64` (`CAX11`–`CAX41`) is a smart alternative
+### When `ARM64` (`CAX11`-`CAX41`) is a smart alternative
 
 - `CAX` cores are non-hyperthreaded Ampere Altra physical ARM64 cores with
   strong steady-state throughput.
@@ -77,7 +77,7 @@ Both `CX` (Intel/AMD `x86`) and `CAX` (Ampere Altra `arm`) belong to the
 
 ### Operational rule for 4 GB starter seats (`CX23` and `CAX11`)
 
-A 4 GB server running Docker + Coolify idles around 1.2–1.5 GB RAM, leaving
+A 4 GB server running Docker + Coolify idles around 1.2-1.5 GB RAM, leaving
 roughly 2.5 GB for container builds. When building Node, Astro, or Next.js
 projects on a 4 GB seat:
 
@@ -93,7 +93,7 @@ projects on a 4 GB seat:
 Avoid inadvertently running multiple small Hetzner servers when a single
 `cx43` (16 GB) or `cx53` (32 GB) can consolidate those workloads:
 
-- Every extra VPS wastes 1–1.5 GB of RAM on duplicate kernel, systemd, Docker,
+- Every extra VPS wastes 1-1.5 GB of RAM on duplicate kernel, systemd, Docker,
   and Coolify/agent overhead.
 - A single consolidated `cx43` or `cx53` gives every hosted service access to
   shared burst CPU and RAM headroom, one firewall policy, and one backup/snapshot
@@ -147,7 +147,7 @@ Hetzner Cloud has two distinct capacity layers:
 The agent workflow uses a **two-layer strategy** (also emitted in `radar` JSON
 under `cto_strategy`):
 
-- **Layer 1 — Direct API Placement (`--allow-unavailable`):**
+- **Layer 1 - Direct API Placement (`--allow-unavailable`):**
   Before waiting in a poll loop, pass `--allow-unavailable` to
   `legends-hetzner server create` (or `server snipe`). This still enforces all
   9 non-capacity safety checks (name, type, location, image, SSH keys, support,
@@ -156,7 +156,7 @@ under `cto_strategy`):
   engine. If the hypervisor has a slot, the server is created immediately; if
   the placement engine has no slots, the API returns `resource_unavailable`
   cleanly with no charge.
-- **Layer 2 — Rate-Limit-Safe Watch (`radar --watch` / `server snipe`):**
+- **Layer 2 - Rate-Limit-Safe Watch (`radar --watch` / `server snipe`):**
   When direct API placement returns `resource_unavailable` or when watching
   passively until the catalog flips to `available=true`, use the bounded,
   jittered watch loop (`--interval >= 30`s).

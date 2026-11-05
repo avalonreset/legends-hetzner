@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.4 - 2026-11-05
+
+- Add symlink refusal (`is_symlink()`) across `--out`, `--plan`, `--user-data`, and `--receipt` file paths (`CWE-59`) with unit test coverage.
+- Add `.legends-module`, `docs/router-provenance.json`, `assets/manifest.json`, and `scripts/smoke_installed_resources.py` to match the CTO Legends ecosystem module contract.
+- Upgrade `scripts/check_release.py`, `AGENTS.md`, and `docs/AGENT-RECIPE.md` with Windows Defender / EDR anti-ransomware guardrails, raster metadata verification, and em/en-dash enforcement.
+- Pin `avalonreset/legends-empire` `v0.3.4` (`1ede96ad670b60b215b66457369691da6c61d017`) in `.github/workflows/checks.yml`.
+
 ## 0.1.3 - 2026-10-31
 
 - Add `legends-hetzner radar` for read-only Cost-Optimized (`CX`/`CAX`) stock sweeps across `fsn1`, `nbg1`, and `hel1`, Fractional CTO tier ranking (`cx43` -> `cx33` -> `cx23` -> `cx53`), and rate-limit-safe watch polling (`--interval >= 30`s with random jitter and bounded `--max-polls`).

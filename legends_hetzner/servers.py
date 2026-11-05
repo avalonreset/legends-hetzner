@@ -128,7 +128,10 @@ def create_plan(name: str, server_type: str, location: str, image: str,
     if not payload["server_type"] or not payload["location"] or not payload["image"]:
         raise PlanError("PLAN_INVALID", "type, location, and image are required.")
     if user_data_path:
-        raw = Path(user_data_path).read_bytes()
+        ud_path = Path(user_data_path)
+        if ud_path.is_symlink():
+            raise PlanError("USERDATA_INVALID", "Refusing symlinked --user-data path.")
+        raw = ud_path.read_bytes()
         text = validate_user_data(raw)
         payload["user_data"] = text
         payload["user_data_sha256"] = PLAN_HASH_PREFIX + _sha_hex(raw)
@@ -137,10 +140,14 @@ def create_plan(name: str, server_type: str, location: str, image: str,
 
 def write_plan_file(plan_obj: dict, out_path: str) -> str:
     target = Path(out_path).expanduser()
+    if target.is_symlink() or target.parent.is_symlink():
+        raise PlanError("PLAN_INVALID", f"Refusing symlinked plan output path: {target}.")
     if target.exists():
         raise PlanError("PLAN_EXISTS", f"Refusing to overwrite plan file: {target}.")
     target.parent.mkdir(parents=True, exist_ok=True)
     tmp = target.with_suffix(target.suffix + ".tmp")
+    if tmp.is_symlink():
+        raise PlanError("PLAN_INVALID", f"Refusing symlinked plan temp path: {tmp}.")
     tmp.write_text(json.dumps(plan_obj, indent=2) + "\n", encoding="utf-8")
     tmp.replace(target)
     return str(target)
@@ -148,8 +155,11 @@ def write_plan_file(plan_obj: dict, out_path: str) -> str:
 
 def load_plan(plan_path: str, expected_hash: str | None = None,
               max_age_hours: float | None = DEFAULT_MAX_AGE_HOURS) -> tuple[dict, str]:
+    source = Path(plan_path)
+    if source.is_symlink():
+        raise PlanError("PLAN_INVALID", f"Refusing symlinked plan file: {plan_path}.")
     try:
-        raw = Path(plan_path).read_text(encoding="utf-8")
+        raw = source.read_text(encoding="utf-8")
         obj = json.loads(raw)
     except FileNotFoundError:
         raise PlanError("PLAN_NOT_FOUND", f"Plan file not found: {plan_path}.") from None
@@ -229,6 +239,8 @@ def validate_receipt_path(receipt_path: str | None) -> None:
     if not receipt_path:
         return
     target = Path(receipt_path).expanduser()
+    if target.is_symlink() or target.parent.is_symlink():
+        raise CreateError("RECEIPT_PATH_INVALID", f"Refusing symlinked receipt path: {target}.")
     if target.exists():
         raise CreateError("RECEIPT_EXISTS", f"Refusing to overwrite receipt: {target}.")
     try:
@@ -541,6 +553,8 @@ def _write_receipt_file(receipt: dict, receipt_path: str | None) -> str | None:
     if not receipt_path:
         return None
     target = Path(receipt_path).expanduser()
+    if target.is_symlink() or target.parent.is_symlink():
+        raise CreateError("RECEIPT_PATH_INVALID", f"Refusing symlinked receipt path: {target}.")
     if target.exists():
         raise CreateError("RECEIPT_EXISTS", f"Refusing to overwrite receipt: {target}.")
     target.parent.mkdir(parents=True, exist_ok=True)

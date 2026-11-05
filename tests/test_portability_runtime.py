@@ -644,6 +644,27 @@ class TestPlanOffline(unittest.TestCase):
                 servers_mod.validate_receipt_path(str(target))
             self.assertEqual(ctx.exception.code, "RECEIPT_EXISTS")
 
+    def test_symlink_paths_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            plan = servers_mod.create_plan("qa-sym", "cax11", "hel1",
+                                           "ubuntu-24.04", ["k"])
+            target = str(Path(tmp) / "plan.json")
+            with mock.patch.object(Path, "is_symlink", return_value=True):
+                with self.assertRaises(servers_mod.PlanError) as ctx:
+                    servers_mod.create_plan(
+                        "qa-sym", "cax11", "hel1", "ubuntu-24.04", ["k"],
+                        user_data_path=target)
+                self.assertEqual(ctx.exception.code, "USERDATA_INVALID")
+                with self.assertRaises(servers_mod.PlanError) as ctx:
+                    servers_mod.write_plan_file(plan, target)
+                self.assertEqual(ctx.exception.code, "PLAN_INVALID")
+                with self.assertRaises(servers_mod.PlanError) as ctx:
+                    servers_mod.load_plan(target)
+                self.assertEqual(ctx.exception.code, "PLAN_INVALID")
+                with self.assertRaises(servers_mod.CreateError) as ctx:
+                    servers_mod.validate_receipt_path(target)
+                self.assertEqual(ctx.exception.code, "RECEIPT_PATH_INVALID")
+
 
 def _canned_preflight_pass(shape="new"):
     """MOCKED hcloud list payloads shaped like 1.61 or newer output."""

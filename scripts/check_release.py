@@ -24,7 +24,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-TOOL_VERSION = "0.1.3"
+TOOL_VERSION = "0.1.4"
 FAIL = "FAIL"
 WARN = "WARN"
 MAX_PER_CODE_PATH = 10
@@ -146,6 +146,18 @@ PRIVATE_ENV_RE = re.compile(r"\.empire[/\\]secrets|empire\.env\b|fleet\.env\b")
 TOKEN_KV_RE = re.compile(r"HCLOUD_TOKEN\s*[:=]\s*([^\s\"']+)")
 TOKEN_QUOTED_RE = re.compile(r"HCLOUD_TOKEN\s*=\s*[\"']([^\"']+)[\"']")
 PRIVKEY_RE = re.compile(r"BEGIN (?:[A-Z0-9 ]* )?PRIVATE KEY")
+EDR_PATTERNS = (
+    re.compile(r"(?i)sk_live_[a-z0-9]{12,}"),
+    re.compile(r"gh[pousr]_[A-Za-z0-9]{20,}"),
+    re.compile(r"CREATE_NO_WINDOW"),
+    re.compile(r"0x08000000"),
+    re.compile(r"(?i)-WindowStyle\s+Hidden"),
+    re.compile(r"(?i)-ExecutionPolicy\s+Bypass"),
+    re.compile(r"(?i)ctypes\.windll"),
+    re.compile(r"(?i)CryptUnprotectData"),
+    re.compile(r"(?i)GetAsyncKeyState"),
+    re.compile(r"(?i)IndexedDB"),
+)
 
 IP_ALLOW = [
     ipaddress.ip_network("192.0.2.0/24"),      # TEST-NET-1 documentation
@@ -238,6 +250,15 @@ def check_fingerprints(gate: Gate) -> None:
             if PRIVKEY_RE.search(line):
                 gate.add(FAIL, "fp", "FP_PRIVKEY",
                          f"private key block ({where})", path)
+            if path.name != "check_release.py":
+                for edr_re in EDR_PATTERNS:
+                    if edr_re.search(line):
+                        gate.add(FAIL, "edr", "EDR_RESIDUE",
+                                 f"forbidden EDR/secret pattern {edr_re.pattern} ({where})",
+                                 path)
+            if path.suffix.lower() == ".md" and ("\u2014" in line or "\u2013" in line):
+                gate.add(FAIL, "copy", "DASH_FORBIDDEN",
+                         f"disallowed em/en-dash in copy ({where})", path)
 
 
 def check_private_fingerprints(gate: Gate, patterns_path: Path) -> None:
@@ -280,7 +301,7 @@ def check_private_fingerprints(gate: Gate, patterns_path: Path) -> None:
 # ---------------------------------------------------------------- secrets
 
 SECRET_NAMES = (".env",)
-SECRET_SUFFIXES = (".pem", ".key", ".p12", ".pfx")
+SECRET_SUFFIXES = (".pem", ".key", ".p12", ".pfx", ".bat", ".cmd", ".vbs", ".ahk")
 
 
 def check_secret_files(gate: Gate) -> None:
@@ -823,11 +844,42 @@ def check_links(gate: Gate) -> None:
 # ---------------------------------------------------------------- assets
 
 PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
+PNG_METADATA_CHUNKS = {"tEXt", "iTXt", "zTXt", "eXIf"}
+WEBP_METADATA_CHUNKS = {b"EXIF", b"XMP "}
 ASSET_SPECS = {
     "assets/banner.png": (4096, 1024, None),
     "assets/preview.png": (1024, 256, None),
     "assets/social-preview.png": (1280, 640, 1_000_000),
 }
+
+
+def _image_metadata_issues(path: Path) -> list[str]:
+    try:
+        raw = path.read_bytes()
+    except OSError:
+        return []
+    issues: list[str] = []
+    suffix = path.suffix.lower()
+    if suffix == ".png" and raw.startswith(PNG_MAGIC):
+        offset = 8
+        while offset + 8 <= len(raw):
+            length = struct.unpack(">I", raw[offset:offset + 4])[0]
+            chunk = raw[offset + 4:offset + 8].decode("latin1", errors="ignore")
+            if chunk in PNG_METADATA_CHUNKS:
+                issues.append(f"PNG metadata chunk {chunk} in {path.name}")
+            if chunk == "IEND":
+                break
+            offset += 12 + length
+    elif suffix == ".webp" and raw[:4] == b"RIFF" and raw[8:12] == b"WEBP":
+        offset = 12
+        while offset + 8 <= len(raw):
+            tag = raw[offset:offset + 4]
+            length = struct.unpack("<I", raw[offset + 4:offset + 8])[0]
+            if tag in WEBP_METADATA_CHUNKS:
+                issues.append(f"WebP metadata chunk {tag!r} in {path.name}")
+                break
+            offset += 8 + length + (length % 2)
+    return issues
 
 
 def _png_dims(path: Path) -> tuple[int, int] | None:
@@ -863,6 +915,34 @@ def check_assets(gate: Gate) -> None:
         if max_bytes is not None and path.stat().st_size > max_bytes:
             gate.add(FAIL, "asset", "ASSET_SIZE",
                      f"exceeds {max_bytes} bytes", path)
+    manifest = gate.root / "assets" / "manifest.json"
+    if manifest.is_file():
+        data = _load_json(manifest)
+        entries = data.get("files") if isinstance(data, dict) else None
+        if not isinstance(entries, list):
+            gate.add(FAIL, "asset", "ASSET_MANIFEST_INVALID",
+                     "assets/manifest.json missing files list", manifest)
+        else:
+            for entry in entries:
+                if not isinstance(entry, dict):
+                    continue
+                target = gate.root / "assets" / str(entry.get("name", ""))
+                try:
+                    raw = target.read_bytes()
+                except OSError:
+                    gate.add(FAIL, "asset", "ASSET_MISSING",
+                             f"manifest asset missing: {entry.get('name')}", target)
+                    continue
+                if len(raw) != entry.get("bytes"):
+                    gate.add(FAIL, "asset", "ASSET_MANIFEST_BYTES",
+                             f"manifest byte mismatch: {entry.get('name')}", target)
+                if hashlib.sha256(raw).hexdigest() != entry.get("sha256"):
+                    gate.add(FAIL, "asset", "ASSET_MANIFEST_HASH",
+                             f"manifest hash mismatch: {entry.get('name')}", target)
+    for path in iter_tree_files(gate.root):
+        if path.suffix.lower() in {".png", ".webp"}:
+            for issue in _image_metadata_issues(path):
+                gate.add(FAIL, "asset", "ASSET_METADATA", issue, path)
 
 
 # ---------------------------------------------------------------- main

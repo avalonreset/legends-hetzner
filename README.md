@@ -76,7 +76,7 @@ The separate official [`hcloud` CLI](https://github.com/hetznercloud/cli) must b
 For standalone Python use outside `cto-legends`, install the tagged release into a virtual environment:
 
 ```console
-python -m pip install "git+https://github.com/avalonreset/legends-hetzner.git@v0.1.3"
+python -m pip install "git+https://github.com/avalonreset/legends-hetzner.git@v0.1.4"
 legends-hetzner doctor
 legends-hetzner resources
 ```

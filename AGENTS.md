@@ -21,3 +21,5 @@ Public identity: legends-hetzner. The earlier private kit is a separate
 compatibility surface, not a dependency.
 Keep runtime evidence and user configuration outside installed sources.
 Keep Windows, macOS, Linux, live read, live canary, mocked write, and untested evidence distinct.
+
+EDR and Security Guardrails: Never spawn hidden consoles, execution-policy bypass shell wrappers, or background localhost daemons. Never read local browser profile databases, DPAPI stores, or third-party credential stores. Never follow symlinks when reading or writing plans, user-data, or operational receipts (`--out`, `--plan`, `--user-data`, `--receipt`). Use only the explicit `HCLOUD_TOKEN` environment variable or a named `hcloud` context (`--context`).

@@ -41,6 +41,7 @@ jobs:
           set -e
           legends-hetzner --version
           python -m legends_hetzner --version
+          python "$GITHUB_WORKSPACE/scripts/smoke_installed_resources.py"
           legends-hetzner resources > resources.json
           python - <<'EOF'
           import hashlib, json
@@ -91,8 +92,8 @@ jobs:
         with:
           persist-credentials: false
           repository: avalonreset/legends-empire
-          # Immutable legends-empire 0.3.1 transaction engine.
-          ref: dac252a647cbe8b42285317fe096e20afaf2fbe9
+          # Immutable legends-empire 0.3.4 transaction engine.
+          ref: 1ede96ad670b60b215b66457369691da6c61d017
           path: .integration/empire
       - name: Attach packaged knowledge on the native OS
         shell: bash

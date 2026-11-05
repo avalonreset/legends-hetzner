@@ -1,6 +1,6 @@
 # `legends-hetzner` agent recipe (canonical)
 
-Module `legends-hetzner` v0.1.3. Agent-operated Hetzner Cloud workflows that
+Module `legends-hetzner` v0.1.4. Agent-operated Hetzner Cloud workflows that
 wrap the official `hcloud` CLI with reviewed plans, read-only preflight,
 Cost-Optimized stock radar and rate-limit-safe sniping, and a source-cited
 reference library.
@@ -13,7 +13,7 @@ Read first, in order:
 
 1. `docs/CLI-CONTRACT.json` (exact CLI syntax, source of truth)
 2. `docs/CTO-SIZING-AND-SNIPING.md` (Fractional CTO hardware selection, x86 vs ARM64, tier ladder, rescale rules, and rate-limit-safe sniping)
-3. `docs/LIMITATIONS.md` (what v0.1.3 does not do)
+3. `docs/LIMITATIONS.md` (what v0.1.4 does not do)
 4. `docs/SOURCES.md` (source ledger with dates and URLs)
 5. The runbook for the task at hand (list below)
 
@@ -89,7 +89,7 @@ contract file wins. Never invent wrapper flags.
    and cannot be injected into existing servers by Hetzner. Verify access and
    cloud-init completion before declaring success.
 5. Backups and restore: `docs/BACKUPS.md`. The wrapper has no backup or
-   snapshot commands in v0.1.3; use the Console, the API, or `hcloud`
+   snapshot commands in v0.1.4; use the Console, the API, or `hcloud`
    directly, and prove restores with a rehearsal, not with backup existence.
 6. Knowledge: `docs/KNOWLEDGE-PACK.md`. The attachable pack is
    `knowledge/hetzner/pack.json` (schema `legends.knowledge-pack/v1`).
@@ -121,3 +121,10 @@ contract file wins. Never invent wrapper flags.
 - Never record tokens, private inventories, server addresses from private
   estates, or customer data in the repository or the knowledge pack.
 - Quote receipt `status` values exactly; `uncertain_*` is not success.
+
+## EDR and Security Guardrails
+
+- Never spawn hidden consoles, execution-policy bypass shell wrappers, or background localhost daemons.
+- Never read local browser profile databases, DPAPI stores, or third-party credential stores.
+- Never follow symlinks when reading or writing plans, user-data, or operational receipts (`--out`, `--plan`, `--user-data`, `--receipt`); refuse symlinked targets and existing output files rather than overwriting them.
+- Use only the explicit `HCLOUD_TOKEN` environment variable or a named `hcloud` context (`--context`), and never pass secret values on command lines or write them into receipts.

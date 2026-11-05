@@ -8,7 +8,7 @@ selection doctrine and the rate-limit-safe stock-sniping workflow.
 
 Hetzner Cloud categorizes server types into three lines (`category`):
 
-- **`cost_optimized` (`CX23`–`CX53` x86 and `CAX11`–`CAX41` ARM64):**
+- **`cost_optimized` (`CX23`-`CX53` x86 and `CAX11`-`CAX41` ARM64):**
   Primary high-leverage target. Offered **only** in the three European
   `eu-central` locations:
   - **Falkenstein, Germany (`fsn1`)**
@@ -21,7 +21,7 @@ Hetzner Cloud categorizes server types into three lines (`category`):
 - **`general_purpose` (`CCX` dedicated vCPU):**
   Dedicated threads for sustained heavy CPU loads at a much higher price point.
 
-## 2. Architecture: x86 (`CX23`–`CX53`) vs. ARM64 (`CAX11`–`CAX41`)
+## 2. Architecture: x86 (`CX23`-`CX53`) vs. ARM64 (`CAX11`-`CAX41`)
 
 ### Prefer `x86` (`CX`) by default
 
