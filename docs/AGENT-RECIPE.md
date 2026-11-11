@@ -1,6 +1,6 @@
 # `legends-hetzner` agent recipe (canonical)
 
-Module `legends-hetzner` v0.1.4. Agent-operated Hetzner Cloud workflows that
+Module `legends-hetzner` v0.1.5. Agent-operated Hetzner Cloud workflows that
 wrap the official `hcloud` CLI with reviewed plans, read-only preflight,
 Cost-Optimized stock radar and rate-limit-safe sniping, and a source-cited
 reference library.
@@ -13,7 +13,7 @@ Read first, in order:
 
 1. `docs/CLI-CONTRACT.json` (exact CLI syntax, source of truth)
 2. `docs/CTO-SIZING-AND-SNIPING.md` (Fractional CTO hardware selection, x86 vs ARM64, tier ladder, rescale rules, and rate-limit-safe sniping)
-3. `docs/LIMITATIONS.md` (what v0.1.4 does not do)
+3. `docs/LIMITATIONS.md` (what v0.1.5 does not do)
 4. `docs/SOURCES.md` (source ledger with dates and URLs)
 5. The runbook for the task at hand (list below)
 
@@ -57,9 +57,9 @@ Global flags: `--context NAME`, `--timeout SECS` (default 30, range 1-120),
 | `catalog [--kind all\|server-types\|locations\|images\|ssh-keys]` | live read-only | Live catalog snapshot. JSON to stdout. |
 | `radar [--category cost_optimized\|regular_purpose\|general_purpose\|all] [--locations LOCS] [--germany-only] [--arch any\|x86\|arm] [--types TYPES] [--watch] [--interval SECS] [--jitter SECS] [--max-polls N]` | live read-only | Sweeps live server-type stock, prices, and Fractional CTO tier recommendations (default `cost_optimized` in `fsn1,nbg1,hel1`). With `--watch`, polls at safe jittered intervals (`>= 30`s) and exits 0 when stock opens or 3 when no match opens. |
 | `server plan --name NAME --type TYPE --location LOC --image IMG --ssh-key KEY [--ssh-key KEY...] [--user-data FILE] [--label k=v ...] --out FILE` | offline | Writes an immutable plan file `{plan: {...}, plan_hash: sha256:...}`. SSH key required (names or numeric IDs). Records `planned_context` and snapshots reviewed user-data bytes with digest. Refuses to overwrite `--out`. User data at most 32768 bytes and must start with `#cloud-config` or `#!/`. Plans may contain plaintext bootstrap config: keep private, no secrets. |
-| `server preflight --plan FILE [--max-plan-age-hours H]` | live read-only | Verifies plan hash, planned context, digest, and age, then checks name, type, location, image, and keys. No writes. |
-| `server create --plan FILE --plan-hash sha256:... --approve [--dry-run] [--receipt FILE] [--max-plan-age-hours H]` | live | Requires `--approve` plus a matching `--plan-hash`. Single CLI invocation; the wrapper never retries (upstream `hcloud` may perform internal retries). Uncertain results are reported honestly with nonzero exit. Receipts are redacted. `--dry-run` runs preflight only. |
-| `server snipe --plan FILE --plan-hash sha256:... --approve [--dry-run] [--receipt FILE] [--max-plan-age-hours H] [--interval SECS] [--jitter SECS] [--max-polls N]` | live | Rate-limit-safe sniper (`--interval >= 30`s, bounded `--max-polls 1..120`). Aborts immediately on poll 1 if any non-capacity preflight check fails; polls read-only while `location_available` is `false`; executes at most one `server create` invocation the moment confirmed `available=true` capacity opens. |
+| `server preflight --plan FILE [--max-plan-age-hours H] [--allow-unavailable]` | live read-only | Verifies plan hash, planned context, digest, and age, then checks name, type, location, image, and keys. No writes. |
+| `server create --plan FILE --plan-hash sha256:... --approve [--dry-run] [--receipt FILE] [--max-plan-age-hours H] [--allow-unavailable]` | live | Requires `--approve` plus a matching `--plan-hash`. Single CLI invocation; the wrapper never retries (upstream `hcloud` may perform internal retries). Uncertain results are reported honestly with nonzero exit. Receipts are redacted. `--dry-run` runs preflight only. |
+| `server snipe --plan FILE --plan-hash sha256:... --approve [--dry-run] [--receipt FILE] [--max-plan-age-hours H] [--allow-unavailable] [--interval SECS] [--jitter SECS] [--max-polls N]` | live | Rate-limit-safe sniper (`--interval >= 30`s, bounded `--max-polls 1..120`). Aborts immediately on poll 1 if any non-capacity preflight check fails; polls read-only while `location_available` is `false`; executes at most one `server create` invocation the moment confirmed `available=true` capacity opens. |
 | `resources` | offline | Resolves recipe, pack, cloud-init, and skill paths. JSON with absolute paths. |
 
 Exit codes: 0 success (including passing dry-run; `doctor` only when

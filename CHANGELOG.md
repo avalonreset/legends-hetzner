@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.5 - 2026-11-11
+
+- Harden `enrich_server_types_via_rest` in `legends_hetzner/hcloud.py` with `urllib.request.ProxyHandler({})` and `_NoRedirectHandler` to reject HTTP redirects fail-closed, ignore ambient proxy environment variables, and read `_MAX_REST_BYTES + 1` to reject truncated oversized responses (`CWE-918`, `CWE-522`).
+- Remove direct Python scraping of third-party `%APPDATA%/hcloud/cli.toml` and `~/.config/hcloud/cli.toml` credential stores per Windows 11 EDR Gate Law 3 (`CWE-59`); REST enrichment uses `HCLOUD_TOKEN` from `os.environ` exclusively while `--context` authentication stays inside the official `hcloud` CLI subprocess.
+- Enforce strict identifier validation (`^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$`, rejecting leading `-` and control characters) across `server_type`, `location`, `image`, `ssh_keys`, `labels`, `context`, `radar` filters, and `describe` selectors, and pass `--` before positional selectors in `hcloud server describe` (`CWE-88`).
+- Enforce full ancestor-chain symlink/reparse refusal (exempting macOS `/var`, `/tmp`, `/etc`), Windows Controlled Folder Access (CFA) folder refusal, bounded `<= 1 MB` (`O_NOFOLLOW`) plan reads with duplicate-JSON-key rejection, `st_size <= 32768` user-data checks before read, and atomic `O_CREAT | O_EXCL` plan and receipt writes (`CWE-59`, `CWE-367`).
+- Document `--allow-unavailable` on `server preflight`, `server create`, and `server snipe` in `docs/AGENT-RECIPE.md`; add `PRIVACY.md`; update `MANIFEST.in`, `setup.py`, `.github/workflows/checks.yml`, and `scripts/check_release.py`.
+
 ## 0.1.4 - 2026-11-05
 
 - Add symlink refusal (`is_symlink()`) across `--out`, `--plan`, `--user-data`, and `--receipt` file paths (`CWE-59`) with unit test coverage.

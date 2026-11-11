@@ -45,6 +45,24 @@ class SubprocessSafetyTest(unittest.TestCase):
         self.assertEqual(H.clamp_timeout(9999), 120)
         self.assertEqual(H.clamp_timeout(None), 30)
 
+    def test_invalid_context_rejected(self):
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("HCLOUD_TOKEN", None)
+            with self.assertRaises(H.HCloudError) as ctx:
+                H.resolve_auth("-flag-injection")
+            self.assertEqual(ctx.exception.code, "AUTH_INVALID_CONTEXT")
+            bad_auth = H.Auth(context="-bad", token_present=False, source="context")
+            with self.assertRaises(H.HCloudError) as ctx2:
+                H.build_argv(["server", "list"], bad_auth)
+            self.assertEqual(ctx2.exception.code, "AUTH_INVALID_CONTEXT")
+
+    def test_no_redirect_handler_refuses_redirect(self):
+        handler = H._NoRedirectHandler()
+        req = H.urllib.request.Request("https://api.hetzner.cloud/v1/server_types")
+        with self.assertRaises(H.urllib.error.HTTPError) as ctx:
+            handler.redirect_request(req, None, 302, "Found", {}, "https://evil.example/steal")
+        self.assertEqual(ctx.exception.code, 302)
+
     def test_real_timeout_fixture_shape(self):
         # Real local timeout (sleep snippet); proves TimeoutExpired handling
         # works against actual subprocess output attributes.

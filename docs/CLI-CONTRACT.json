@@ -1,7 +1,7 @@
 {
   "contract_version": 4,
   "tool": "legends-hetzner",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "entries": [
     "python -m legends_hetzner",
     "legends-hetzner -> legends_hetzner.cli:main"

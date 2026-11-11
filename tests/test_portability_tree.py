@@ -49,12 +49,27 @@ def write_clean_tree(root: Path) -> None:
     (root / "pyproject.toml").write_text(
         '[project]\nname="x"\nversion="0.1.0"\n'
         'requires-python=">=3.11"\nlicense="MIT"\n', encoding="utf-8")
-    for name in ("README.md", "LICENSE", "THIRD_PARTY_NOTICES.md"):
+    for name in (
+        "README.md",
+        "LICENSE",
+        "NOTICE",
+        "PRIVACY.md",
+        "THIRD_PARTY_NOTICES.md",
+        ".legends-module",
+        ".legends-router-pin",
+    ):
         (root / name).write_text("ok\n", encoding="utf-8")
     (root / ".gitignore").write_text(".env\n*.pem\n*.key\n",
                                      encoding="utf-8")
     (root / "docs").mkdir()
     (root / "docs" / "AGENT-RECIPE.md").write_text("# r\n", encoding="utf-8")
+    skill_dir = root / "skills" / "cto-legends"
+    skill_dir.mkdir(parents=True)
+    (skill_dir / "SKILL.md").write_bytes(b"# skill\n")
+    skill_digest = hashlib.sha256((skill_dir / "SKILL.md").read_bytes()).hexdigest()
+    (root / "docs" / "router-provenance.json").write_text(
+        json.dumps({"sha256": skill_digest}), encoding="utf-8"
+    )
     vault = root / "knowledge" / "hetzner" / "vault"
     vault.mkdir(parents=True)
     (vault / "index.md").write_bytes(b"# i\n")

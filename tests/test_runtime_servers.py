@@ -59,7 +59,7 @@ def _fake_runner(mapping, calls=None):
         if key == "ssh-key list":
             return list(mapping.get("keys", []))
         if key == "server describe":
-            name = argv[2] if len(argv) > 2 else ""
+            name = argv[-1] if "--" in argv else (argv[2] if len(argv) > 2 else "")
             for item in mapping.get("servers", []):
                 if item.get("name") == name or str(item.get("id", "")) == name:
                     return {"name": item.get("name"), "id": item.get("id")}
@@ -533,6 +533,72 @@ class FreezeRegressionTest(unittest.TestCase):
         with self.assertRaises(H.HCloudError) as ctx:
             S.preflight(payload, _auth_token(), runner_json=bad_json)
         self.assertEqual(ctx.exception.code, "HCLOUD_BAD_JSON")
+
+    def test_leading_dash_identifiers_rejected_and_describe_has_double_dash(self):
+        for bad_kwargs in (
+            {"server_type": "-o"},
+            {"location": "--help"},
+            {"image": "-v"},
+            {"ssh_keys": ["-bad-key"]},
+            {"labels": ["-bad=val"]},
+            {"labels": ["key=-bad"]},
+            {"planned_context": "-bad-ctx"},
+        ):
+            kwargs = {
+                "name": "web-1",
+                "server_type": "cx22",
+                "location": "fsn1",
+                "image": "ubuntu-24.04",
+                "ssh_keys": ["key-a"],
+            }
+            kwargs.update(bad_kwargs)
+            with self.assertRaises(S.PlanError) as ctx:
+                S.create_plan(**kwargs)
+            self.assertEqual(ctx.exception.code, "PLAN_INVALID")
+
+        seen_argv: list[list[str]] = []
+
+        def spy_runner(argv, auth, timeout=None, hcloud_bin="hcloud"):
+            seen_argv.append(list(argv))
+            return {"id": 42, "name": "web-1"}
+
+        rb = S._readback("42", _auth_token(), "hcloud", 10, spy_runner, expected_id=42, expected_name="web-1")
+        self.assertTrue(rb["found"])
+        self.assertEqual(seen_argv[0], ["server", "describe", "-o", "json", "--", "42"])
+
+        bad_rb = S._readback("-malicious-flag", _auth_token(), "hcloud", 10, spy_runner)
+        self.assertFalse(bad_rb["ok"])
+        self.assertIsNone(bad_rb["found"])
+
+    def test_darwin_tmp_exemption_and_cfa_refusal(self):
+        def fake_is_symlink(self_path: Path) -> bool:
+            return self_path in (Path("/var"), Path("/tmp"), Path("/etc"))
+
+        with patch.object(S.sys, "platform", "darwin"), patch.object(Path, "is_symlink", fake_is_symlink):
+            S.check_no_symlink_chain(Path("/tmp/test-plan.json"), S.PlanError, "PLAN_INVALID", "symlink")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            docs_dir = Path(tmp) / "Documents"
+            docs_dir.mkdir()
+            target = docs_dir / "plan.json"
+            with patch.object(S.os, "name", "nt"), patch.dict(S.os.environ, {"USERPROFILE": tmp}, clear=False):
+                with self.assertRaises(S.PlanError) as ctx:
+                    S.check_not_cfa_protected(target, S.PlanError, "PLAN_INVALID")
+                self.assertEqual(ctx.exception.code, "PLAN_INVALID")
+
+    def test_load_plan_rejects_oversized_and_duplicate_keys(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            dup_path = Path(tmp) / "dup.json"
+            dup_path.write_text('{"plan": {}, "plan": {}, "plan_hash": "sha256:' + "0" * 64 + '"}', encoding="utf-8")
+            with self.assertRaises(S.PlanError) as ctx:
+                S.load_plan(str(dup_path))
+            self.assertEqual(ctx.exception.code, "PLAN_INVALID")
+
+            big_path = Path(tmp) / "big.json"
+            big_path.write_bytes(b"{" + b" " * (S.MAX_PLAN_BYTES + 10) + b"}")
+            with self.assertRaises(S.PlanError) as ctx2:
+                S.load_plan(str(big_path))
+            self.assertEqual(ctx2.exception.code, "PLAN_INVALID")
 
 
 if __name__ == "__main__":

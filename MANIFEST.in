@@ -1,4 +1,4 @@
-include .legends-module LICENSE README.md AGENTS.md SECURITY.md CHANGELOG.md THIRD_PARTY_NOTICES.md CONTRIBUTING.md SUPPORT.md CITATION.cff CODE_OF_CONDUCT.md
+include .legends-module .legends-router-pin LICENSE NOTICE PRIVACY.md README.md AGENTS.md SECURITY.md CHANGELOG.md THIRD_PARTY_NOTICES.md CONTRIBUTING.md SUPPORT.md CITATION.cff CODE_OF_CONDUCT.md
 recursive-include docs *.md *.json
 recursive-include knowledge *.md *.json
 recursive-include cloud-init *.yaml
@@ -6,5 +6,5 @@ recursive-include skills *.md
 recursive-include scripts *.py
 recursive-include tests *.py
 recursive-include assets *.png *.webp *.json
-recursive-include .github *.yml
+recursive-include .github *.yml *.md
 global-exclude __pycache__ *.py[cod] .env *.pem *.key

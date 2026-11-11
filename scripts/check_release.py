@@ -24,7 +24,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-TOOL_VERSION = "0.1.4"
+TOOL_VERSION = "0.1.5"
 FAIL = "FAIL"
 WARN = "WARN"
 MAX_PER_CODE_PATH = 10
@@ -259,6 +259,9 @@ def check_fingerprints(gate: Gate) -> None:
             if path.suffix.lower() == ".md" and ("\u2014" in line or "\u2013" in line):
                 gate.add(FAIL, "copy", "DASH_FORBIDDEN",
                          f"disallowed em/en-dash in copy ({where})", path)
+            if path.suffix.lower() == ".md" and "\\`" in line:
+                gate.add(FAIL, "copy", "BACKTICK_ESCAPE",
+                         f"backslash-escaped backtick in markdown ({where})", path)
 
 
 def check_private_fingerprints(gate: Gate, patterns_path: Path) -> None:
@@ -751,11 +754,34 @@ def check_manifest(gate: Gate) -> None:
                              f"MANIFEST.in references missing dir "
                              f"{parts[1] if len(parts) > 1 else '?'}",
                              manifest)
-    for name in ("README.md", "LICENSE", "THIRD_PARTY_NOTICES.md"):
+    for name in (
+        "README.md",
+        "LICENSE",
+        "NOTICE",
+        "PRIVACY.md",
+        "THIRD_PARTY_NOTICES.md",
+        ".legends-module",
+        ".legends-router-pin",
+        "docs/router-provenance.json",
+    ):
         if not (root / name).is_file():
             gate.add(FAIL, "manifest", "RESOURCE_FILE_MISSING",
                      f"{name} is required (wheel resources + sdist)",
                      root / name)
+    prov_path = root / "docs" / "router-provenance.json"
+    skill_path = root / "skills" / "cto-legends" / "SKILL.md"
+    if prov_path.is_file() and skill_path.is_file():
+        prov = _load_json(prov_path)
+        if isinstance(prov, dict):
+            actual_skill_sha = hashlib.sha256(skill_path.read_bytes()).hexdigest()
+            if prov.get("sha256") != actual_skill_sha:
+                gate.add(
+                    FAIL,
+                    "manifest",
+                    "ROUTER_PROVENANCE_MISMATCH",
+                    "docs/router-provenance.json sha256 does not match skills/cto-legends/SKILL.md",
+                    prov_path,
+                )
     # JSON payloads must parse.
     for folder in ("docs", "knowledge", "assets"):
         base = root / folder

@@ -15,6 +15,8 @@ import json
 import math
 import os
 import re
+import stat
+import sys
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -26,9 +28,110 @@ PLAN_VERSION = 1
 PLAN_HASH_PREFIX = "sha256:"
 DEFAULT_MAX_AGE_HOURS = 24
 MAX_USERDATA_BYTES = 32768
+MAX_PLAN_BYTES = 1_048_576  # 1 MB cap for plan JSON files
 
 _NAME_RE = re.compile(r"^[A-Za-z0-9]([A-Za-z0-9.-]{0,61}[A-Za-z0-9])?$")
+_IDENT_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
+_CONTEXT_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 _HASH_RE = re.compile(r"^sha256:[0-9a-fA-F]{64}$")
+_DARWIN_SYSTEM_SYMLINKS = (Path("/var"), Path("/tmp"), Path("/etc"))
+_CFA_PROTECTED_FOLDERS = (
+    "Desktop",
+    "Documents",
+    "Pictures",
+    "Music",
+    "Videos",
+    "Favorites",
+    "OneDrive",
+)
+
+
+def _reject_duplicate_keys(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    out: dict[str, object] = {}
+    for key, val in pairs:
+        if key in out:
+            raise ValueError(f"Duplicate JSON key: {key!r}")
+        out[key] = val
+    return out
+
+
+def check_no_symlink_chain(path: Path, exc_cls, code: str, message: str) -> None:
+    """Reject symlink/reparse targets across the full ancestor chain.
+
+    Exempts standard macOS system root symlinks (/var, /tmp, /etc).
+    """
+    current = path.expanduser()
+    if not current.is_absolute():
+        current = Path.cwd() / current
+    for candidate in (current, *current.parents):
+        if sys.platform == "darwin" and candidate in _DARWIN_SYSTEM_SYMLINKS:
+            continue
+        try:
+            if candidate.is_symlink():
+                raise exc_cls(code, message)
+        except OSError:
+            continue
+
+
+def check_not_cfa_protected(path: Path, exc_cls, code: str) -> None:
+    """Refuse writing into Windows Controlled Folder Access (CFA) directories."""
+    if os.name != "nt":
+        return
+    try:
+        resolved = path.expanduser().resolve()
+    except OSError:
+        resolved = path.expanduser()
+    roots: list[Path] = []
+    for env_key in ("USERPROFILE", "OneDrive", "OneDriveConsumer", "OneDriveCommercial"):
+        val = (os.environ.get(env_key) or "").strip()
+        if val:
+            try:
+                roots.append(Path(val).resolve())
+            except OSError:
+                roots.append(Path(val))
+    for root in roots:
+        if root.name.lower() == "onedrive":
+            if resolved == root or root in resolved.parents:
+                raise exc_cls(
+                    code,
+                    f"Refusing to write inside Windows Controlled Folder Access path: {path}",
+                )
+        for folder in _CFA_PROTECTED_FOLDERS:
+            protected = root / folder
+            if resolved == protected or protected in resolved.parents:
+                raise exc_cls(
+                    code,
+                    f"Refusing to write inside Windows Controlled Folder Access path: {path}",
+                )
+
+
+def _read_bounded_bytes(path: Path, max_bytes: int, exc_cls, not_found_code: str, invalid_code: str, label: str) -> bytes:
+    flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+    try:
+        fd = os.open(str(path), flags)
+    except FileNotFoundError:
+        raise exc_cls(not_found_code, f"{label} not found: {path}.") from None
+    except OSError as exc:
+        raise exc_cls(invalid_code, f"{label} unreadable: {exc}.") from None
+    try:
+        st = os.fstat(fd)
+        if not stat.S_ISREG(st.st_mode):
+            raise exc_cls(invalid_code, f"{label} must be a regular file: {path}.")
+        if st.st_size > max_bytes:
+            raise exc_cls(invalid_code, f"{label} exceeds {max_bytes} bytes.")
+        chunks: list[bytes] = []
+        total = 0
+        while True:
+            chunk = os.read(fd, min(65536, max_bytes + 1 - total))
+            if not chunk:
+                break
+            chunks.append(chunk)
+            total += len(chunk)
+            if total > max_bytes:
+                raise exc_cls(invalid_code, f"{label} exceeds {max_bytes} bytes.")
+        return b"".join(chunks)
+    finally:
+        os.close(fd)
 
 
 class PlanError(HCloudError):
@@ -74,6 +177,24 @@ def validate_name(name: str) -> str:
     return value
 
 
+def validate_identifier(value: str, field: str) -> str:
+    cleaned = (value or "").strip() if isinstance(value, str) else ""
+    if not cleaned or not _IDENT_RE.match(cleaned):
+        raise PlanError("PLAN_INVALID", f"Invalid {field}: {value!r}.")
+    return cleaned
+
+
+def validate_context_name(value: str | None) -> str | None:
+    if value is None:
+        return None
+    cleaned = (value if isinstance(value, str) else "").strip()
+    if not cleaned:
+        return None
+    if not _CONTEXT_RE.match(cleaned):
+        raise PlanError("PLAN_INVALID", f"Invalid context name: {value!r}.")
+    return cleaned
+
+
 def validate_user_data(data: bytes) -> str:
     if len(data) > MAX_USERDATA_BYTES:
         raise PlanError("USERDATA_INVALID",
@@ -92,11 +213,11 @@ def validate_user_data(data: bytes) -> str:
 def _parse_labels(pairs: list[str] | None) -> dict[str, str]:
     labels: dict[str, str] = {}
     for item in pairs or []:
-        if "=" not in item:
+        if not isinstance(item, str) or "=" not in item:
             raise PlanError("PLAN_INVALID", f"Invalid --label (want k=v): {item!r}.")
         key, value = item.split("=", 1)
         key, value = key.strip(), value.strip()
-        if not key or not value:
+        if not key or not value or not _IDENT_RE.match(key) or not _IDENT_RE.match(value):
             raise PlanError("PLAN_INVALID", f"Invalid --label (want k=v): {item!r}.")
         labels[key] = value
     return labels
@@ -106,17 +227,23 @@ def create_plan(name: str, server_type: str, location: str, image: str,
                 ssh_keys: list[str], user_data_path: str | None = None,
                 labels: list[str] | None = None,
                 planned_context: str | None = None) -> dict:
-    keys = sorted({k.strip() for k in (ssh_keys or []) if k.strip()})
-    if not keys:
+    raw_keys = [k.strip() for k in (ssh_keys or []) if isinstance(k, str) and k.strip()]
+    if not raw_keys:
         raise PlanError("PLAN_INVALID", "At least one --ssh-key is required.")
-    binding = (planned_context or "").strip() or None
+    keys = sorted({validate_identifier(k, "ssh_key") for k in raw_keys})
+    binding = validate_context_name(planned_context)
+    st_val = (server_type or "").strip()
+    loc_val = (location or "").strip()
+    img_val = (image or "").strip()
+    if not st_val or not loc_val or not img_val:
+        raise PlanError("PLAN_INVALID", "type, location, and image are required.")
     payload: dict = {
         "version": PLAN_VERSION,
         "tool": TOOL,
         "name": validate_name(name),
-        "server_type": (server_type or "").strip(),
-        "location": (location or "").strip(),
-        "image": (image or "").strip(),
+        "server_type": validate_identifier(st_val, "server_type"),
+        "location": validate_identifier(loc_val, "location"),
+        "image": validate_identifier(img_val, "image"),
         "ssh_keys": keys,
         "planned_context": binding,
         "user_data": None,
@@ -125,45 +252,71 @@ def create_plan(name: str, server_type: str, location: str, image: str,
         "created_at": utcnow_iso(),
         "tool_version": __version__,
     }
-    if not payload["server_type"] or not payload["location"] or not payload["image"]:
-        raise PlanError("PLAN_INVALID", "type, location, and image are required.")
     if user_data_path:
         ud_path = Path(user_data_path)
-        if ud_path.is_symlink():
-            raise PlanError("USERDATA_INVALID", "Refusing symlinked --user-data path.")
-        raw = ud_path.read_bytes()
+        check_no_symlink_chain(
+            ud_path, PlanError, "USERDATA_INVALID", "Refusing symlinked --user-data path."
+        )
+        raw = _read_bounded_bytes(
+            ud_path,
+            MAX_USERDATA_BYTES,
+            PlanError,
+            "USERDATA_INVALID",
+            "USERDATA_INVALID",
+            "user-data",
+        )
         text = validate_user_data(raw)
         payload["user_data"] = text
         payload["user_data_sha256"] = PLAN_HASH_PREFIX + _sha_hex(raw)
     return {"plan": payload, "plan_hash": plan_hash_of(payload)}
 
 
-def write_plan_file(plan_obj: dict, out_path: str) -> str:
+def write_plan_file(plan_obj: dict, out_path: str, *, overwrite: bool = False) -> str:
     target = Path(out_path).expanduser()
-    if target.is_symlink() or target.parent.is_symlink():
-        raise PlanError("PLAN_INVALID", f"Refusing symlinked plan output path: {target}.")
-    if target.exists():
+    check_no_symlink_chain(
+        target, PlanError, "PLAN_INVALID", f"Refusing symlinked plan output path: {target}."
+    )
+    check_not_cfa_protected(target, PlanError, "PLAN_INVALID")
+    if not overwrite and target.exists():
         raise PlanError("PLAN_EXISTS", f"Refusing to overwrite plan file: {target}.")
     target.parent.mkdir(parents=True, exist_ok=True)
-    tmp = target.with_suffix(target.suffix + ".tmp")
-    if tmp.is_symlink():
-        raise PlanError("PLAN_INVALID", f"Refusing symlinked plan temp path: {tmp}.")
-    tmp.write_text(json.dumps(plan_obj, indent=2) + "\n", encoding="utf-8")
-    tmp.replace(target)
+    check_no_symlink_chain(
+        target, PlanError, "PLAN_INVALID", f"Refusing symlinked plan output path: {target}."
+    )
+    encoded = (json.dumps(plan_obj, indent=2) + "\n").encode("utf-8")
+    flags = (
+        os.O_WRONLY
+        | os.O_CREAT
+        | (os.O_TRUNC if overwrite else os.O_EXCL)
+        | getattr(os, "O_BINARY", 0)
+        | getattr(os, "O_NOFOLLOW", 0)
+    )
+    try:
+        fd = os.open(str(target), flags, 0o600)
+    except FileExistsError:
+        raise PlanError("PLAN_EXISTS", f"Refusing to overwrite plan file: {target}.") from None
+    except OSError as exc:
+        raise PlanError("PLAN_INVALID", f"Cannot write plan file {target}: {exc}.") from None
+    try:
+        os.write(fd, encoded)
+    finally:
+        os.close(fd)
     return str(target)
 
 
 def load_plan(plan_path: str, expected_hash: str | None = None,
               max_age_hours: float | None = DEFAULT_MAX_AGE_HOURS) -> tuple[dict, str]:
     source = Path(plan_path)
-    if source.is_symlink():
-        raise PlanError("PLAN_INVALID", f"Refusing symlinked plan file: {plan_path}.")
+    check_no_symlink_chain(
+        source, PlanError, "PLAN_INVALID", f"Refusing symlinked plan file: {plan_path}."
+    )
+    raw_bytes = _read_bounded_bytes(
+        source, MAX_PLAN_BYTES, PlanError, "PLAN_NOT_FOUND", "PLAN_INVALID", "Plan file"
+    )
     try:
-        raw = source.read_text(encoding="utf-8")
-        obj = json.loads(raw)
-    except FileNotFoundError:
-        raise PlanError("PLAN_NOT_FOUND", f"Plan file not found: {plan_path}.") from None
-    except (OSError, json.JSONDecodeError) as exc:
+        raw = raw_bytes.decode("utf-8")
+        obj = json.loads(raw, object_pairs_hook=_reject_duplicate_keys)
+    except (UnicodeDecodeError, ValueError, json.JSONDecodeError) as exc:
         raise PlanError("PLAN_INVALID", f"Plan file unreadable: {exc}.") from None
     payload = obj.get("plan") if isinstance(obj, dict) else None
     embedded = obj.get("plan_hash") if isinstance(obj, dict) else None
@@ -183,6 +336,28 @@ def load_plan(plan_path: str, expected_hash: str | None = None,
         if want != embedded:
             raise PlanError("PLAN_HASH_MISMATCH",
                             "Given --plan-hash does not match the reviewed plan.")
+    validate_name(str(payload.get("name") or ""))
+    validate_identifier(str(payload.get("server_type") or ""), "server_type")
+    validate_identifier(str(payload.get("location") or ""), "location")
+    validate_identifier(str(payload.get("image") or ""), "image")
+    if payload.get("planned_context") is not None:
+        validate_context_name(str(payload.get("planned_context")))
+    ssh_keys = payload.get("ssh_keys")
+    if not isinstance(ssh_keys, list) or not ssh_keys:
+        raise PlanError("PLAN_INVALID", "Plan has no SSH keys.")
+    for k in ssh_keys:
+        if not isinstance(k, str):
+            raise PlanError("PLAN_INVALID", "Invalid SSH key entry in plan.")
+        validate_identifier(k, "ssh_key")
+    labels_obj = payload.get("labels")
+    if labels_obj is not None:
+        if not isinstance(labels_obj, dict):
+            raise PlanError("PLAN_INVALID", "Plan labels must be an object.")
+        for lk, lv in labels_obj.items():
+            if not isinstance(lk, str) or not isinstance(lv, str):
+                raise PlanError("PLAN_INVALID", "Plan labels must be string key/value pairs.")
+            validate_identifier(lk, "label key")
+            validate_identifier(lv, "label value")
     user_data = payload.get("user_data")
     digest = payload.get("user_data_sha256")
     if user_data is not None:
@@ -191,8 +366,6 @@ def load_plan(plan_path: str, expected_hash: str | None = None,
         actual = PLAN_HASH_PREFIX + _sha_hex(user_data.encode("utf-8"))
         if actual != digest:
             raise PlanError("PLAN_TAMPERED", "user-data digest mismatch (tampered plan).")
-    if not payload.get("ssh_keys"):
-        raise PlanError("PLAN_INVALID", "Plan has no SSH keys.")
     try:
         created = datetime.fromisoformat(str(payload.get("created_at", "")).replace("Z", "+00:00"))
     except (ValueError, TypeError):
@@ -234,19 +407,24 @@ def enforce_planned_context(payload: dict, auth: Auth) -> None:
         )
 
 
-def validate_receipt_path(receipt_path: str | None) -> None:
+def validate_receipt_path(receipt_path: str | None, *, overwrite: bool = False) -> None:
     """Prove the receipt is writable before any cloud write."""
     if not receipt_path:
         return
     target = Path(receipt_path).expanduser()
-    if target.is_symlink() or target.parent.is_symlink():
-        raise CreateError("RECEIPT_PATH_INVALID", f"Refusing symlinked receipt path: {target}.")
-    if target.exists():
+    check_no_symlink_chain(
+        target, CreateError, "RECEIPT_PATH_INVALID", f"Refusing symlinked receipt path: {target}."
+    )
+    check_not_cfa_protected(target, CreateError, "RECEIPT_PATH_INVALID")
+    if not overwrite and target.exists():
         raise CreateError("RECEIPT_EXISTS", f"Refusing to overwrite receipt: {target}.")
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
     except OSError as exc:
         raise CreateError("RECEIPT_PATH_INVALID", f"Receipt dir not writable: {exc}.") from None
+    check_no_symlink_chain(
+        target, CreateError, "RECEIPT_PATH_INVALID", f"Refusing symlinked receipt path: {target}."
+    )
     probe = target.parent / f".lh-receipt-probe-{os.getpid()}"
     try:
         probe.write_text("ok", encoding="utf-8")
@@ -484,8 +662,15 @@ def _readback(selector: str, auth: Auth, hcloud_bin: str,
     nested alone never counts without id/name match. Invalid shapes stay
     unknown (found None), never false missing.
     """
+    sel = (selector or "").strip() if isinstance(selector, str) else ""
+    if not sel or not _IDENT_RE.match(sel):
+        return {
+            "ok": False,
+            "found": None,
+            "detail": f"Invalid selector {selector!r}; refusing describe.",
+        }
     try:
-        data = runner_json(["server", "describe", selector, "-o", "json"], auth,
+        data = runner_json(["server", "describe", "-o", "json", "--", sel], auth,
                            timeout=timeout, hcloud_bin=hcloud_bin)
     except HCloudError as exc:
         return {"ok": False, "found": None, "detail": redact_text(str(exc))}
@@ -549,16 +734,38 @@ def _receipt(payload: dict, plan_hash: str, status: str, dry_run: bool,
     return redact_obj(raw)
 
 
-def _write_receipt_file(receipt: dict, receipt_path: str | None) -> str | None:
+def _write_receipt_file(receipt: dict, receipt_path: str | None, *, overwrite: bool = False) -> str | None:
     if not receipt_path:
         return None
     target = Path(receipt_path).expanduser()
-    if target.is_symlink() or target.parent.is_symlink():
-        raise CreateError("RECEIPT_PATH_INVALID", f"Refusing symlinked receipt path: {target}.")
-    if target.exists():
+    check_no_symlink_chain(
+        target, CreateError, "RECEIPT_PATH_INVALID", f"Refusing symlinked receipt path: {target}."
+    )
+    check_not_cfa_protected(target, CreateError, "RECEIPT_PATH_INVALID")
+    if not overwrite and target.exists():
         raise CreateError("RECEIPT_EXISTS", f"Refusing to overwrite receipt: {target}.")
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")
+    check_no_symlink_chain(
+        target, CreateError, "RECEIPT_PATH_INVALID", f"Refusing symlinked receipt path: {target}."
+    )
+    encoded = (json.dumps(receipt, indent=2) + "\n").encode("utf-8")
+    flags = (
+        os.O_WRONLY
+        | os.O_CREAT
+        | (os.O_TRUNC if overwrite else os.O_EXCL)
+        | getattr(os, "O_BINARY", 0)
+        | getattr(os, "O_NOFOLLOW", 0)
+    )
+    try:
+        fd = os.open(str(target), flags, 0o600)
+    except FileExistsError:
+        raise CreateError("RECEIPT_EXISTS", f"Refusing to overwrite receipt: {target}.") from None
+    except OSError as exc:
+        raise CreateError("RECEIPT_PATH_INVALID", f"Cannot write receipt {target}: {exc}.") from None
+    try:
+        os.write(fd, encoded)
+    finally:
+        os.close(fd)
     return str(target)
 
 

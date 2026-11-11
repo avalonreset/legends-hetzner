@@ -20,6 +20,7 @@ from .servers import (
     DEFAULT_MAX_AGE_HOURS,
     PlanError,
     PreflightBlocked,
+    _IDENT_RE,
     _is_deprecated,
     _location_entry_matches,
     _receipt,
@@ -294,7 +295,7 @@ def validate_watch_params(
     return interval_i, jitter_i, polls_i
 
 
-def _parse_csv_list(raw: str | list[str] | None) -> list[str]:
+def _parse_csv_list(raw: str | list[str] | None, label: str = "filter") -> list[str]:
     if raw is None:
         return []
     if isinstance(raw, list):
@@ -305,7 +306,14 @@ def _parse_csv_list(raw: str | list[str] | None) -> list[str]:
     seen: set[str] = set()
     for part in items:
         cleaned = str(part or "").strip().lower()
-        if cleaned and cleaned not in seen:
+        if not cleaned:
+            continue
+        if not _IDENT_RE.match(cleaned):
+            raise PlanError(
+                "RADAR_INVALID_FILTER",
+                f"Invalid {label} token: {part!r}.",
+            )
+        if cleaned not in seen:
             seen.add(cleaned)
             out.append(cleaned)
     return out

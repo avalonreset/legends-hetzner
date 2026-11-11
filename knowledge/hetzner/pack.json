@@ -2,7 +2,7 @@
   "schema": "legends.knowledge-pack/v1",
   "id": "hetzner",
   "module": "legends-hetzner",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "entrypoint": "index.md",
   "files": [
     {

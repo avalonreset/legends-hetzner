@@ -13,12 +13,9 @@ from __future__ import annotations
 import http.client
 import json
 import os
-from pathlib import Path
 import re
 import shutil
 import subprocess
-import sys
-import tomllib
 from dataclasses import dataclass
 import urllib.error
 import urllib.request
@@ -29,6 +26,7 @@ _REAL_SUBPROCESS_RUN = subprocess.run
 HETZNER_SERVER_TYPES_URL = "https://api.hetzner.cloud/v1/server_types"
 _MAX_REST_BYTES = 2 * 1024 * 1024
 _KNOWN_CONTEXT_TOKENS: set[str] = set()
+_CONTEXT_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 
 DEFAULT_TIMEOUT = 30
 MIN_TIMEOUT = 1
@@ -140,6 +138,11 @@ def _truncate(text: str, limit: int = ERROR_SNIPPET_MAX) -> str:
 def resolve_auth(context: str | None) -> Auth:
     """Resolve explicit auth: HCLOUD_TOKEN xor --context."""
     ctx = (context or "").strip() or None
+    if ctx is not None and not _CONTEXT_RE.match(ctx):
+        raise HCloudError(
+            "AUTH_INVALID_CONTEXT",
+            "Invalid --context name; use 1..64 alphanumeric/._- chars without leading '-'.",
+        )
     token_present = bool((os.environ.get(TOKEN_ENV) or "").strip())
     if ctx and token_present:
         raise HCloudError(
@@ -174,6 +177,11 @@ def build_argv(base_args: list[str], auth: Auth, hcloud_bin: str = "hcloud") -> 
     binary = (hcloud_bin or "").strip() or "hcloud"
     argv: list[str] = [binary]
     if auth.context:
+        if not _CONTEXT_RE.match(auth.context):
+            raise HCloudError(
+                "AUTH_INVALID_CONTEXT",
+                "Invalid --context name; use 1..64 alphanumeric/._- chars without leading '-'.",
+            )
         argv += ["--context", auth.context]
     argv += list(base_args)
     token = os.environ.get(TOKEN_ENV, "")
@@ -264,60 +272,36 @@ def run(base_args: list[str], auth: Auth, timeout: int | float | None = None,
     return stdout_s
 
 
-def _hcloud_config_candidates() -> list[Path]:
-    """Candidate paths for the upstream hcloud cli.toml config file."""
-    override = (os.environ.get("HCLOUD_CONFIG") or "").strip()
-    if override:
-        try:
-            return [Path(override)]
-        except (RuntimeError, OSError, ValueError):
-            return []
-    candidates: list[Path] = []
-    if os.name == "nt":
-        appdata = (os.environ.get("APPDATA") or "").strip()
-        if appdata:
-            candidates.append(Path(appdata) / "hcloud" / "cli.toml")
-    try:
-        home = Path.home()
-    except (RuntimeError, OSError):
-        home = None
-    if sys.platform == "darwin" and home is not None:
-        candidates.append(
-            home / "Library" / "Application Support" / "hcloud" / "cli.toml"
+class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Reject all HTTP redirects fail-closed so Bearer credentials never redirect."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise urllib.error.HTTPError(
+            req.full_url,
+            code,
+            f"HTTP redirects are refused ({code})",
+            headers,
+            fp,
         )
-    xdg = (os.environ.get("XDG_CONFIG_HOME") or "").strip()
-    if xdg:
-        candidates.append(Path(xdg) / "hcloud" / "cli.toml")
-    if home is not None:
-        candidates.append(home / ".config" / "hcloud" / "cli.toml")
-    return candidates
+
+
+def _default_rest_opener():
+    return urllib.request.build_opener(
+        urllib.request.ProxyHandler({}),
+        _NoRedirectHandler(),
+    )
 
 
 def _resolve_rest_token(auth: Auth) -> str | None:
-    """Resolve the active token for read-only REST server_types enrichment."""
+    """Resolve the active token for read-only REST server_types enrichment.
+
+    Never reads third-party CLI credential stores (%APPDATA%/hcloud/cli.toml
+    or ~/.config/hcloud/cli.toml) in Python per Windows 11 EDR Gate Law 3.
+    Only uses HCLOUD_TOKEN from os.environ when auth.source == 'token'.
+    """
     if auth.source == "token":
         tok = (os.environ.get(TOKEN_ENV) or "").strip()
         return tok or None
-    if auth.source == "context" and auth.context:
-        for candidate in _hcloud_config_candidates():
-            try:
-                if not candidate.is_file():
-                    continue
-                parsed = tomllib.loads(candidate.read_text(encoding="utf-8"))
-            except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError):
-                continue
-            contexts = parsed.get("contexts")
-            if not isinstance(contexts, list):
-                continue
-            for entry in contexts:
-                if not isinstance(entry, dict):
-                    continue
-                if entry.get("name") == auth.context:
-                    tok = str(entry.get("token") or "").strip()
-                    if tok:
-                        if len(tok) >= 4:
-                            _KNOWN_CONTEXT_TOKENS.add(tok)
-                        return tok
     return None
 
 
@@ -356,13 +340,18 @@ def enrich_server_types_via_rest(
     if not token:
         return items, False
     bounded = clamp_timeout(timeout)
-    open_fn = opener if opener is not None else urllib.request.urlopen
+    if opener is not None:
+        open_fn = opener
+    else:
+        open_fn = _default_rest_opener().open
     rest_by_name: dict[str, dict] = {}
     rest_by_id: dict[int, dict] = {}
     page = 1
     try:
         while page <= 5:
             url = f"{HETZNER_SERVER_TYPES_URL}?per_page=50&page={page}"
+            if not url.startswith("https://api.hetzner.cloud/v1/server_types"):
+                raise ValueError("Refusing non-official Hetzner REST endpoint")
             req = urllib.request.Request(
                 url,
                 headers={
@@ -373,7 +362,9 @@ def enrich_server_types_via_rest(
                 method="GET",
             )
             with open_fn(req, timeout=bounded) as resp:
-                raw = resp.read(_MAX_REST_BYTES)
+                raw = resp.read(_MAX_REST_BYTES + 1)
+            if len(raw) > _MAX_REST_BYTES:
+                raise ValueError("REST response exceeds _MAX_REST_BYTES limit")
             payload = json.loads(_to_str(raw))
             if not isinstance(payload, dict):
                 break

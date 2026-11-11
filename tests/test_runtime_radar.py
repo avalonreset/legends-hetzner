@@ -458,32 +458,32 @@ class TestRadarAndSniper(unittest.TestCase):
             def read(self, n=-1):
                 return json.dumps(rest_payload).encode("utf-8")
 
-        with tempfile.TemporaryDirectory() as tmp:
-            toml_path = Path(tmp) / "cli.toml"
-            toml_path.write_text(
-                'active_context = "prod"\n[[contexts]]\nname = "prod"\ntoken = "ctx-secret-token-98765"\n',
-                encoding="utf-8",
+        with mock.patch.dict(
+            os.environ, {"HCLOUD_TOKEN": "ctx-secret-token-98765"}, clear=False
+        ):
+            tok_auth = hcloud.Auth(
+                context=None, token_present=True, source="token"
             )
-            with mock.patch.dict(os.environ, {"HCLOUD_CONFIG": str(toml_path)}, clear=False):
-                ctx_auth = hcloud.Auth(
-                    context="prod", token_present=False, source="context"
-                )
-                enriched, did_enrich = hcloud.enrich_server_types_via_rest(
-                    cli_items,
-                    ctx_auth,
-                    timeout=10,
-                    opener=lambda req, timeout=10: FakeResp(),
-                )
-                self.assertTrue(did_enrich)
-                cx33 = next(i for i in enriched if i["name"] == "cx33")
-                self.assertEqual(cx33["category"], "cost_optimized")
-                fsn1_loc = next(l for l in cx33["locations"] if l["name"] == "fsn1")
-                self.assertIs(fsn1_loc["available"], True)
-                # Ensure context token resolved from cli.toml is redacted by redact_text
-                self.assertNotIn(
-                    "ctx-secret-token-98765",
-                    hcloud.redact_text("leaked ctx-secret-token-98765 here"),
-                )
+            enriched, did_enrich = hcloud.enrich_server_types_via_rest(
+                cli_items,
+                tok_auth,
+                timeout=10,
+                opener=lambda req, timeout=10: FakeResp(),
+            )
+            self.assertTrue(did_enrich)
+            cx33 = next(i for i in enriched if i["name"] == "cx33")
+            self.assertEqual(cx33["category"], "cost_optimized")
+            fsn1_loc = next(l for l in cx33["locations"] if l["name"] == "fsn1")
+            self.assertIs(fsn1_loc["available"], True)
+            self.assertNotIn(
+                "ctx-secret-token-98765",
+                hcloud.redact_text("leaked ctx-secret-token-98765 here"),
+            )
+            # Context auth must NEVER scrape local cli.toml credential stores in Python
+            ctx_auth = hcloud.Auth(
+                context="prod", token_present=False, source="context"
+            )
+            self.assertIsNone(hcloud._resolve_rest_token(ctx_auth))
 
     def test_cli_radar_and_snipe_entrypoints(self):
         st_list = _sample_server_types(
@@ -693,19 +693,36 @@ class TestRadarAndSniper(unittest.TestCase):
             self.assertEqual(rc1, cli.EXIT_USAGE)
             self.assertEqual(rc2, cli.EXIT_USAGE)
 
-    def test_hcloud_config_candidates_handles_missing_home(self):
-        env_clean = {
-            k: v
-            for k, v in os.environ.items()
-            if k not in ("HCLOUD_CONFIG", "APPDATA", "XDG_CONFIG_HOME")
-        }
-        with mock.patch.dict(os.environ, env_clean, clear=True):
-            with mock.patch(
-                "legends_hetzner.hcloud.Path.home",
-                side_effect=RuntimeError("Could not determine home directory"),
-            ):
-                candidates = hcloud._hcloud_config_candidates()
-                self.assertEqual(candidates, [])
+    def test_rest_enrichment_rejects_oversized_response(self):
+        cli_items = _sample_server_types(
+            cx43_fsn1=None,
+            cx33_fsn1=None,
+            cx23_hel1=None,
+            cax11_hel1=None,
+            include_category=False,
+        )
+
+        class OversizedResp:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+            def read(self, n=-1):
+                return b"x" * (hcloud._MAX_REST_BYTES + 1)
+
+        with mock.patch.dict(
+            os.environ, {"HCLOUD_TOKEN": "test-secret-token-12345"}, clear=False
+        ):
+            enriched, did_enrich = hcloud.enrich_server_types_via_rest(
+                cli_items,
+                self.auth,
+                timeout=5,
+                opener=lambda req, timeout=5: OversizedResp(),
+            )
+            self.assertFalse(did_enrich)
+            self.assertFalse(hasattr(hcloud, "_hcloud_config_candidates"))
 
 
 if __name__ == "__main__":

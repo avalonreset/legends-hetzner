@@ -76,7 +76,7 @@ The separate official [`hcloud` CLI](https://github.com/hetznercloud/cli) must b
 For standalone Python use outside `cto-legends`, install the tagged release into a virtual environment:
 
 ```console
-python -m pip install "git+https://github.com/avalonreset/legends-hetzner.git@v0.1.4"
+python -m pip install "git+https://github.com/avalonreset/legends-hetzner.git@v0.1.5"
 legends-hetzner doctor
 legends-hetzner resources
 ```
@@ -179,7 +179,7 @@ Hetzner's `cost_optimized` line (`CX23`-`CX53` x86 and `CAX11`-`CAX41` ARM64 in 
 ### How does `server snipe` avoid hitting Hetzner Cloud API rate limits?
 `radar --watch` and `server snipe` enforce a strict minimum poll interval of 30 seconds (`--interval 30..3600`, default `60`s) with positive random jitter (`--jitter 0..60`, default `10`s) and bounded `--max-polls` (`1..120`, default `30`). At the default 60-second interval, polling consumes roughly 8% of Hetzner Cloud's 3,600 requests/hour quota, and aborts immediately on Poll 1 if any non-capacity check fails.
 
-### How do existing `cto-legends` users discover and install updates like `v0.1.3`?
+### How do existing `cto-legends` users discover and install updates like `v0.1.5`?
 When you or your agent run `cto-legends handoff legends-hetzner` or `cto-legends check-updates`, `cto-legends` compares your local installation against the canonical catalog and upstream GitHub releases. Running `cto-legends sync --apply` followed by `cto-legends update legends-hetzner --apply` upgrades your isolated environment while retaining the previous version for instant rollback.
 
 ### How does `legends-hetzner` relate to Coolify and MCP servers?
