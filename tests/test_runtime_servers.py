@@ -581,7 +581,7 @@ class FreezeRegressionTest(unittest.TestCase):
             docs_dir = Path(tmp) / "Documents"
             docs_dir.mkdir()
             target = docs_dir / "plan.json"
-            with patch.object(S.os, "name", "nt"), patch.dict(S.os.environ, {"USERPROFILE": tmp}, clear=False):
+            with patch.object(S.sys, "platform", "win32"), patch.dict(S.os.environ, {"USERPROFILE": tmp}, clear=False):
                 with self.assertRaises(S.PlanError) as ctx:
                     S.check_not_cfa_protected(target, S.PlanError, "PLAN_INVALID")
                 self.assertEqual(ctx.exception.code, "PLAN_INVALID")

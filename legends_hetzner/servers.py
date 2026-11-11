@@ -75,7 +75,7 @@ def check_no_symlink_chain(path: Path, exc_cls, code: str, message: str) -> None
 
 def check_not_cfa_protected(path: Path, exc_cls, code: str) -> None:
     """Refuse writing into Windows Controlled Folder Access (CFA) directories."""
-    if os.name != "nt":
+    if sys.platform != "win32":
         return
     try:
         resolved = path.expanduser().resolve()
@@ -89,6 +89,7 @@ def check_not_cfa_protected(path: Path, exc_cls, code: str) -> None:
                 roots.append(Path(val).resolve())
             except OSError:
                 roots.append(Path(val))
+    protected_lower = {f.lower() for f in _CFA_PROTECTED_FOLDERS}
     for root in roots:
         if root.name.lower() == "onedrive":
             if resolved == root or root in resolved.parents:
@@ -96,13 +97,15 @@ def check_not_cfa_protected(path: Path, exc_cls, code: str) -> None:
                     code,
                     f"Refusing to write inside Windows Controlled Folder Access path: {path}",
                 )
-        for folder in _CFA_PROTECTED_FOLDERS:
-            protected = root / folder
-            if resolved == protected or protected in resolved.parents:
-                raise exc_cls(
-                    code,
-                    f"Refusing to write inside Windows Controlled Folder Access path: {path}",
-                )
+        try:
+            rel = resolved.relative_to(root)
+        except ValueError:
+            continue
+        if rel.parts and rel.parts[0].lower() in protected_lower:
+            raise exc_cls(
+                code,
+                f"Refusing to write inside Windows Controlled Folder Access path: {path}",
+            )
 
 
 def _read_bounded_bytes(path: Path, max_bytes: int, exc_cls, not_found_code: str, invalid_code: str, label: str) -> bytes:
