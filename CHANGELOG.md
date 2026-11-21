@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.6 - 2026-11-21
+
+- Add `scripts/render_cards.py` and outlined Legends Font `r1` SVG design cards under `assets/cards/r1/` (`slot-1-agent-handoff.svg`, `slot-2-three-pillars.svg`, `slot-3-plain-english-chains.svg`, `slot-4-hetzner-architecture.svg`, `slot-5-adhoc-vs-hetzner.svg`, `slot-7-message-avalon-reset.svg`, `slot-collection-star-shrine.svg`), removing duplicate root `assets/collection-star-shrine.svg`.
+- Rewrite `README.md` to the evergreen CTO Legends visual architecture standard with plain-english operator chains, two-chamber radar/sniper architecture breakdown, 4-row ad-hoc vs hash-locked VPS comparison table, and collapsible `<details>` reference drawers.
+- Synchronize package metadata, CLI contract, knowledge pack version, and release gate to `0.1.6`.
+
 ## 0.1.5 - 2026-11-11
 
 - Harden `enrich_server_types_via_rest` in `legends_hetzner/hcloud.py` with `urllib.request.ProxyHandler({})` and `_NoRedirectHandler` to reject HTTP redirects fail-closed, ignore ambient proxy environment variables, and read `_MAX_REST_BYTES + 1` to reject truncated oversized responses (`CWE-918`, `CWE-522`).

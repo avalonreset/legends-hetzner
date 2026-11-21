@@ -1,138 +1,111 @@
-<a name="legends-hetzner"></a>
-
 # ![legends-hetzner](assets/banner.webp)
 
 [![release](https://img.shields.io/github/v/release/avalonreset/legends-hetzner?sort=date&style=flat-square&label=release&labelColor=000000&color=ff0000)](https://github.com/avalonreset/legends-hetzner/releases/latest)
 [![checks](https://img.shields.io/github/actions/workflow/status/avalonreset/legends-hetzner/checks.yml?branch=main&label=checks&style=flat-square&labelColor=000000)](https://github.com/avalonreset/legends-hetzner/actions/workflows/checks.yml)
+[![python](https://img.shields.io/badge/python-3.11%2B-000000?style=flat-square&labelColor=000000&color=ff0000)](pyproject.toml)
+[![hcloud](https://img.shields.io/badge/hcloud-CX43%20%C2%B7%20CX33%20%C2%B7%20CX23%20%C2%B7%20CAX-000000?style=flat-square&labelColor=000000&color=ff0000)](docs/CTO-SIZING-AND-SNIPING.md)
 [![license](https://img.shields.io/github/license/avalonreset/legends-hetzner?style=flat-square&label=license&labelColor=000000&color=666666)](LICENSE)
 
-`legends-hetzner` is an open source Hetzner Cloud CLI toolkit, Fractional CTO sizing advisor, and rate-limit-safe capacity sniper for AI coding agents and developers. It helps you inspect Hetzner VPS projects, sweep live `cost_optimized` (`CX`/`CAX`) server stock across European locations (`fsn1`, `nbg1`, `hel1`), prepare SHA-256 hash-pinned provisioning plans, run 10-check preflight validation on Ubuntu 24.04 cloud-init inputs, and attach a 16-file operations knowledge pack across sessions.
+**Hetzner Cloud and VPS stock radar (`CX43`/`CX33`/`CX23` and `CAX`), Fractional CTO sizing advisor, 10-check read-only preflight gate, SHA-256 hash-locked provisioning CLI, and rate-limit-safe capacity sniper for coding agents.**
 
-Built on the official `hcloud` CLI using the Python 3.11+ standard library only (zero third-party pip dependencies, no PowerShell dependency, and no MCP server required). Hetzner credentials are needed only for live provider operations; offline readiness, plan generation, and the Markdown operations library work without credentials.
+![Agent Handoff](assets/cards/r1/slot-1-agent-handoff.svg)
 
-**Quick links:** [Releases](https://github.com/avalonreset/legends-hetzner/releases) · [Agent entry point](AGENTS.md) · [Module recipe](docs/AGENT-RECIPE.md) · [CTO sizing & sniping guide](docs/CTO-SIZING-AND-SNIPING.md) · [Preflight checks](docs/PREFLIGHT.md) · [Knowledge pack](docs/KNOWLEDGE-PACK.md) · [Tested scope](docs/VALIDATION.md) · [Contributing](CONTRIBUTING.md) · [MIT license](LICENSE)
+```text
+Install or update legends-hetzner via cto-legends (https://github.com/avalonreset/cto-legends): run `cto-legends install legends-hetzner --apply`, then `cto-legends handoff legends-hetzner` and follow the returned JSON recipe to verify `legends-hetzner`.
+```
 
-## Table of Contents
+![Three Pillars: Cost-Optimized stock radar, 10-check preflight & sizing, Hash-locked create & snipe](assets/cards/r1/slot-2-three-pillars.svg)
 
-- [What you can do](#what-you-can-do)
-- [Fractional CTO sizing doctrine (`CX` vs `CAX`)](#fractional-cto-sizing-doctrine-cx-vs-cax)
-- [Agent setup (via `cto-legends`)](#agent-setup-via-cto-legends)
-- [Quick start: inspect your Hetzner Cloud project](#quick-start-inspect-your-hetzner-cloud-project)
-- [Commands and exit-code contract](#commands-and-exit-code-contract)
-- [Optional Empire knowledge shelf](#optional-empire-knowledge-shelf)
-- [Architecture and how it works](#architecture-and-how-it-works)
-- [Frequently asked questions](#frequently-asked-questions)
-- [Development, contributing, and license](#development-contributing-and-license)
+## Why `legends-hetzner` exists
 
-## What you can do
+Most agent-driven cloud setups treat server provisioning as ad-hoc shell improvisation:
 
-| Workflow | Command | Primary outcome |
-| --- | --- | --- |
-| Environment readiness | `legends-hetzner doctor [--live]` | Distinguish offline Python/`hcloud` binary readiness from a live read-only Hetzner Cloud API probe. |
-| Server inventory | `legends-hetzner inventory` | Read structured JSON server inventory using an explicit `HCLOUD_TOKEN` or named `--context` (redacting secret tokens). |
-| Provider catalog | `legends-hetzner catalog` | Inspect live `server-types`, `locations`, `images`, and `ssh-keys` (automatically enriching `hcloud 1.61.0` output with REST `category` and `available` fields). |
-| Stock radar & CTO advisor | `legends-hetzner radar` | Sweep live `cost_optimized` (`CX23`-`CX53` x86 and `CAX11`-`CAX41` ARM64) capacity across `fsn1`, `nbg1`, and `hel1`, rank tiers by Fractional CTO priority, and optionally `--watch` at jittered intervals (`>= 30`s). |
-| Immutable server plan | `legends-hetzner server plan` | Write an offline, reviewable JSON provisioning plan pinned by a canonical `sha256:<64hex>` content hash, selected SSH keys, context binding, and `cloud-init` user-data digest. |
-| 10-check preflight | `legends-hetzner server preflight` | Verify 10 read-only checks against live Hetzner Cloud state before any purchase (or pass `--allow-unavailable` to test direct API placement when catalog availability flags lag). |
-| Guarded server create | `legends-hetzner server create` | Require explicit `--approve` and the reviewed `--plan-hash`, execute at most one `hcloud server create` call, verify via readback, and write a redacted receipt. |
-| Rate-limit-safe sniper | `legends-hetzner server snipe` | Poll read-only preflight at bounded, jittered intervals (`--interval >= 30`s, default `60`s + `0..60`s jitter), abort immediately on Poll 1 if any non-capacity check fails, and execute one guarded create when capacity opens. |
-| Packaged resources | `legends-hetzner resources` | Return absolute paths to the installed agent recipe, `cloud-init` baseline, and 16-file `legends.knowledge-pack/v1` directory. |
+1. **Defaulting to 2x pricier tiers or retired instance names:** Without live hypervisor stock data, coding agents guess retired Hetzner instance names from training data or fall back to Regular Purpose (`CPX`) servers that cost more than twice as much per GB of RAM when Cost-Optimized `CX43`, `CX33`, `CX23`, or `CAX` tiers are open in Germany (`fsn1`, `nbg1`) or Finland (`hel1`).
+2. **Failing mid-create or spinning up duplicate billable servers:** Running raw `hcloud server create` commands without an immutable plan or read-only preflight fails midway on missing SSH keys, deprecated OS images, CPU architecture mismatches, or removed `--datacenter` flags. Worse, when a network call times out, an unconstrained agent retries the command and creates duplicate billable VPS instances.
+3. **Triggering API rate-limit bans while polling sold-out stock:** When scarce Cost-Optimized capacity is temporarily out of stock, improvised 1-second shell loops hammer the Hetzner Cloud API and exhaust the 3,600 requests/hour quota right before capacity opens.
 
-This is a focused Hetzner Cloud operator toolkit, not a wrapper for every Hetzner product. It does not administer Hetzner Robot bare-metal servers, automatically migrate applications, manage billing, or replace full Terraform/OpenTofu state reconciliation.
+`legends-hetzner` wraps the official `hcloud` CLI in a Python 3.11+ standard-library runtime (zero third-party pip dependencies, no PowerShell dependency, and no ambient daemon) that separates live discovery from infrastructure writes. Every server creation is locked behind an offline `sha256:<64hex>` plan, verified by 10 read-only preflight checks, executed in at most one guarded `hcloud` invocation with immediate readback verification, and paired with an optional 16-file operations knowledge pack for [`legends-empire`](https://github.com/avalonreset/legends-empire).
 
-## Fractional CTO sizing doctrine (`CX` vs `CAX`)
+## Ask in plain english
 
-Hetzner Cloud's **Cost-Optimized (`cost_optimized`)** line is hosted exclusively in three European data centers: **Falkenstein (`fsn1`, Germany)**, **Nuremberg (`nbg1`, Germany)**, and **Helsinki (`hel1`, Finland)**. Regular Purpose (`CPX`) and General Purpose (`CCX`) lines cost more than twice as much per GB of RAM.
+Once [`cto-legends`](https://github.com/avalonreset/cto-legends) is installed, you ask your coding agent in plain english. It sweeps live European stock, writes an immutable SHA-256 server plan, verifies all 10 read-only preflight checks, and provisions or snipes capacity with a redacted readback receipt:
+
+![Say the job in plain words](assets/cards/r1/slot-3-plain-english-chains.svg)
+
+## Architecture: live CX stock radar, 10-check preflight, and hash-locked sniping
+
+![How live CX stock radar, 10-check preflight, and hash-locked sniping work](assets/cards/r1/slot-4-hetzner-architecture.svg)
+
+### 1. Cost-Optimized stock radar and Fractional CTO sizing doctrine (`CX` vs `CAX`)
+
+Hetzner Cloud's Cost-Optimized (`cost_optimized`) line is hosted in three European locations: **Falkenstein (`fsn1`, Germany)**, **Nuremberg (`nbg1`, Germany)**, and **Helsinki (`hel1`, Finland)**. Regular Purpose (`CPX`) and General Purpose (`CCX`) lines cost more than twice as much per GB of RAM. When running against older `hcloud` binaries (such as `1.61.0`) that omit `locations[].available` and `category` from CLI JSON output, `legends-hetzner` automatically enriches server-type catalogs via hardened read-only REST (`GET /v1/server_types` with redirects disabled and ambient proxies ignored).
 
 | Priority | Server Tier | Arch | Specs (vCPU / RAM / NVMe) | CTO Role & Sizing Guidance |
 | :--- | :--- | :--- | :--- | :--- |
-| **1 (Default)** | **`cx43`** | `x86` | **8 vCPU · 16 GB · 160 GB** | **Ideal Fractional CTO Default.** Best price-to-headroom balance for a consolidated single-server stack (Coolify, reverse proxy, websites, databases, and automation workers) with 100% `linux/amd64` compatibility. |
+| **1 (Default)** | **`cx43`** | `x86` | **8 vCPU · 16 GB · 160 GB** | **Ideal Fractional CTO Default.** Best price-to-headroom balance for a consolidated single-server stack ([`legends-coolify`](https://github.com/avalonreset/legends-coolify), reverse proxy, websites, databases, and workers) with 100% `linux/amd64` compatibility. |
 | **2 (Sweet Spot)** | **`cx33`** | `x86` | **4 vCPU · 8 GB · 80 GB** | **Budget Sweet Spot.** Delivers 2x the CPU and RAM of a `cpx22` fallback at less than half the monthly cost; supports clean in-place rescale from an 80 GB `cpx22` or 40 GB `cx23` in the same location. |
-| **3 (Starter)** | **`cx23`** | `x86` | **2 vCPU · 4 GB · 40 GB** | **Entry Starter Seat.** Sufficient for Coolify and a lightweight static or Astro staging site (configure a **4 GB swapfile** and `NODE_OPTIONS=--max-old-space-size=2048` to prevent Node build OOMs) while waiting to rescale up to `cx33` or `cx43`. |
+| **3 (Starter)** | **`cx23`** | `x86` | **2 vCPU · 4 GB · 40 GB** | **Entry Starter Seat.** Sufficient for a lightweight static or staging stack (configure a **4 GB swapfile** and `NODE_OPTIONS=--max-old-space-size=2048` to prevent Node build OOMs) while waiting to rescale up to `cx33` or `cx43`. |
 | **4 (Ceiling)** | **`cx53`** | `x86` | **16 vCPU · 32 GB · 320 GB** | **Single-Box Consolidation Ceiling.** Consolidating onto one `cx43` or `cx53` is strongly preferred over running multiple small Hetzner VPS instances. |
 | **5-8 (ARM64)** | **`cax31` / `cax21` / `cax11` / `cax41`** | `arm` | **2-16 vCPU · 4-32 GB · 40-320 GB** | **Ampere Altra ARM64 Alternatives.** Non-hyperthreaded ARM64 cores when `x86` tiers are unavailable and every workload supports `linux/arm64` (cannot rescale in-place into `x86` `CX` tiers). |
 
-See [`docs/CTO-SIZING-AND-SNIPING.md`](docs/CTO-SIZING-AND-SNIPING.md) for in-place rescale rules (same location, same CPU architecture, and disk-size monotonicity) and the two-layer catalog vs. live placement API workflow.
+### 2. SHA-256 server plans and the 10-check preflight gate
 
-## Agent setup (via `cto-legends`)
+Before any server can be created, `legends-hetzner server plan` writes an offline JSON plan pinned by a canonical `sha256:<64hex>` content hash, binding your target `--context` (or `HCLOUD_TOKEN` mode), server tier, location, OS image, SSH keys, and `cloud-init` user-data digest (refusing symlinks and existing output files fail-closed). `legends-hetzner server preflight` then verifies 10 read-only checks against live project state:
 
-Part of the [`cto-legends`](https://github.com/avalonreset/cto-legends) ecosystem. `cto-legends` is the single registered router skill; this repository vendors a byte-exact copy at [`skills/cto-legends/SKILL.md`](skills/cto-legends/SKILL.md).
+| Surface | `legends-hetzner` Command | What It Verifies or Executes |
+| :--- | :--- | :--- |
+| **Environment Readiness** | `doctor [--live]` | Distinguishes offline Python 3.11+ and `hcloud` binary readiness from a live read-only Hetzner Cloud location probe. |
+| **Inventory & Catalog** | `inventory`, `catalog` | Audits existing servers and live `server-types`, `locations`, `images`, and `ssh-keys` with automatic secret token redaction. |
+| **Stock Radar & Watch** | `radar [--watch]` | Sweeps live `cost_optimized` capacity across `fsn1`, `nbg1`, and `hel1`, ranks open tiers by Fractional CTO priority, and optionally watches at jittered intervals (`>= 30`s). |
+| **Immutable Plan & 10-Check Gate** | `server plan`, `server preflight` | Verifies `name_available`, `server_type_exists`, `location_exists`, `image_exists`, `ssh_keys_exist`, `location_supported`, `location_available`, `location_not_deprecated`, `image_not_deprecated`, and `arch_compatible`. |
+| **1-Shot Create & Capacity Sniper** | `server create`, `server snipe` | Requires explicit `--approve` and matching `--plan-hash`, polls sold-out tiers safely (`--interval >= 30`s, default `60`s + jitter), executes at most one create call, verifies via live readback, and writes a redacted receipt. |
+| **Packaged Runbooks** | `resources` | Returns absolute paths to the installed agent recipe, Ubuntu 24.04 `cloud-init` baseline, and 16-file `legends.knowledge-pack/v1` operations library. |
 
-Install or update `legends-hetzner` through the router:
+### 3. Direct placement tests (`--allow-unavailable`) and rate-limit-safe sniping (`server snipe`)
 
-```console
-cto-legends sync
-cto-legends sync --apply
-cto-legends install legends-hetzner
-cto-legends install legends-hetzner --apply
-cto-legends handoff legends-hetzner
-cto-legends run legends-hetzner -- doctor
-```
+- **Cached catalog flag vs live placement scheduler:** Hetzner's catalog availability flag (`available=false`) is a cached indicator that grays out tiers in the Web Console UI, while the live placement scheduler behind `hcloud server create` (`POST /v1/servers`) evaluates real-time hypervisor capacity at creation time. When all 9 non-capacity preflight checks pass, you can test direct API placement with `--allow-unavailable` (previewing first with `--dry-run`).
+- **Rate-limit-safe capacity sniper:** When live placement reports `resource_unavailable`, `server snipe` enforces a strict 30-second minimum polling floor (`--interval 30..3600`, default `60`s) with positive random jitter (`--jitter 0..60`, default `10`s) and bounded `--max-polls` (`1..120`, default `30`), consuming roughly 8% of Hetzner's hourly API quota and aborting immediately on Poll 1 if any non-capacity check fails.
 
-If you already have `cto-legends` installed, running `cto-legends handoff legends-hetzner` or `cto-legends check-updates` automatically checks the canonical catalog for new `legends-hetzner` releases and guides your agent through `cto-legends sync --apply` and `cto-legends update legends-hetzner --apply`.
+## Ad-hoc cloud commands vs `legends-hetzner`
 
-The separate official [`hcloud` CLI](https://github.com/hetznercloud/cli) must be installed using its documented Windows, macOS, or Linux instructions. This module never silently installs or upgrades external binaries.
+![Comparison: Ad-hoc cloud commands & console clicks vs Hash-locked VPS engine // legends-hetzner](assets/cards/r1/slot-5-adhoc-vs-hetzner.svg)
 
-For standalone Python use outside `cto-legends`, install the tagged release into a virtual environment:
+## Quick start
 
-```console
-python -m pip install "git+https://github.com/avalonreset/legends-hetzner.git@v0.1.5"
-legends-hetzner doctor
-legends-hetzner resources
-```
-
-<a name="first-useful-workflow"></a>
-
-## Quick start: inspect your Hetzner Cloud project
-
-Configure a named project context using the official `hcloud` CLI's interactive setup (or export `HCLOUD_TOKEN` in your environment; never combine both at once):
-
-```console
+```sh
+# 1. Configure a named hcloud context (or export HCLOUD_TOKEN; never combine both)
 hcloud context create my-project
 legends-hetzner --context my-project doctor --live
 legends-hetzner --context my-project inventory
-legends-hetzner --context my-project radar --germany-only --arch x86
-legends-hetzner --context my-project catalog --kind ssh-keys
-```
 
-### Plan, preflight, and snipe a Cost-Optimized Hetzner VPS
-
-1. **Sweep live stock and CTO recommendations:**
-
-```console
+# 2. Sweep live Cost-Optimized x86 stock and Fractional CTO recommendations
 legends-hetzner --context my-project radar --germany-only --types cx43,cx33,cx23
-```
+legends-hetzner --context my-project catalog --kind ssh-keys
 
-2. **Create an immutable, hash-pinned server plan (offline):**
+# 3. Create an immutable, SHA-256 hash-pinned server plan offline
+legends-hetzner --context my-project server plan \
+  --name example-app --type cx43 --location fsn1 \
+  --image ubuntu-24.04 --ssh-key my-key --out ./server-plan.json
 
-```console
-legends-hetzner --context my-project server plan --name example-app --type cx43 --location fsn1 --image ubuntu-24.04 --ssh-key my-key --out ./server-plan.json
-```
-
-3. **Run the 10-check read-only preflight:**
-
-```console
+# 4. Run the 10-check read-only preflight gate
 legends-hetzner --context my-project server preflight --plan ./server-plan.json
+
+# 5. Preview guarded creation (or pass --allow-unavailable when catalog availability lags)
+legends-hetzner --context my-project server create \
+  --plan ./server-plan.json --plan-hash sha256:REVIEWED_HASH \
+  --approve --dry-run --receipt ./receipt.json
+
+# 6. Poll sold-out capacity at rate-limit-safe jittered intervals (>= 30s)
+legends-hetzner --context my-project server snipe \
+  --plan ./server-plan.json --plan-hash sha256:REVIEWED_HASH \
+  --approve --dry-run --receipt ./snipe-receipt.json \
+  --interval 60 --jitter 10 --max-polls 30
 ```
 
-4. **Test direct API placement or run the rate-limit-safe sniper:**
+## Reference
 
-Hetzner's catalog availability flag (`available=false`) is a cached indicator that grays out tiers in the Web Console UI, while the live placement scheduler behind `hcloud server create` (`POST /v1/servers`) evaluates real-time hypervisor capacity at creation time. When all 9 non-capacity preflight checks pass, you can test direct API placement with `--allow-unavailable` (previewing first with `--dry-run`):
-
-```console
-legends-hetzner --context my-project server preflight --plan ./server-plan.json --allow-unavailable
-legends-hetzner --context my-project server create --plan ./server-plan.json --plan-hash sha256:REVIEWED_HASH --approve --allow-unavailable --dry-run --receipt ./receipt.json
-```
-
-If live placement also reports `resource_unavailable`, use `server snipe` to poll read-only capacity at rate-limit-safe jittered intervals (`--interval >= 30`s, default `60`s) and execute at most one create call when capacity opens:
-
-```console
-legends-hetzner --context my-project server snipe --plan ./server-plan.json --plan-hash sha256:REVIEWED_HASH --approve --dry-run --receipt ./snipe-receipt.json --interval 60 --jitter 10 --max-polls 30
-```
-
-Removing `--dry-run` requests a paid server creation. A disposable live canary has verified creation, readback, key-based SSH, Ubuntu 24.04 cloud-init, and identity-checked cleanup from Windows. See [`docs/VALIDATION.md`](docs/VALIDATION.md) and [`docs/LIVE-CANARY.md`](docs/LIVE-CANARY.md).
-
-## Commands and exit-code contract
+<details>
+<summary><strong>Exit-code contract, receipt statuses, and Empire knowledge shelf</strong></summary>
 
 All commands emit structured JSON on `stdout` and sanitized diagnostics on `stderr` (see [`docs/CLI-CONTRACT.json`](docs/CLI-CONTRACT.json)):
 
@@ -145,62 +118,63 @@ All commands emit structured JSON on `stdout` and sanitized diagnostics on `stde
 | `4` | `CREATE_OR_UNCERTAIN` | `hcloud server create` failed or returned an ambiguous result (`uncertain_exists`, `uncertain_missing`, `uncertain_unknown`); inspect the receipt and readback before retrying. |
 | `5` | `AUTH_MISSING` | Live provider command invoked without `HCLOUD_TOKEN` or `--context NAME`. |
 
-## Optional Empire knowledge shelf
+The module also ships a 16-file `legends.knowledge-pack/v1` operations library under [`knowledge/hetzner/`](knowledge/hetzner/pack.json) (`cto-sizing-and-sniping.md`, `preflight.md`, `ssh-bootstrap.md`, `coolify-boundary.md`, `backups-restore.md`, `troubleshooting.md`, and audit templates). Its suggested attachment path in a selected [`legends-empire`](https://github.com/avalonreset/legends-empire) vault is `wiki/library/legends-hetzner/hetzner`. Installing `legends-hetzner` never modifies a vault automatically; see [`docs/KNOWLEDGE-PACK.md`](docs/KNOWLEDGE-PACK.md) and [`knowledge/hetzner/vault/index.md`](knowledge/hetzner/vault/index.md).
 
-The module ships a 16-file `legends.knowledge-pack/v1` operations library under [`knowledge/hetzner/`](knowledge/hetzner/pack.json). Its suggested attachment path in a selected [`legends-empire`](https://github.com/avalonreset/legends-empire) vault is `wiki/library/legends-hetzner/hetzner`.
+</details>
 
-- **No automatic vault writes:** Installing `legends-hetzner` never modifies a vault. Knowledge pack attachment is a separate preview-and-apply transaction in `legends-empire` (`0.3.1+`).
-- **Preserves local decisions:** Upgrading the attached pack updates unmodified reference files while preserving your user-owned `index.md` and refusing to overwrite locally edited notes.
-- **Cross-platform support:** Tested on Linux, macOS, and native Windows local fixed NTFS (`Python 3.11+`). See [`docs/KNOWLEDGE-PACK.md`](docs/KNOWLEDGE-PACK.md) and [`knowledge/hetzner/vault/index.md`](knowledge/hetzner/vault/index.md).
+<details>
+<summary><strong>Agent setup (via <code>cto-legends</code>) and standalone installation</strong></summary>
 
-## Architecture and how it works
+### Agent setup (via `cto-legends`)
+
+Part of [`cto-legends`](https://github.com/avalonreset/cto-legends). `cto-legends` is the single registered router skill; this repository vendors a byte-exact copy at [`skills/cto-legends/SKILL.md`](skills/cto-legends/SKILL.md).
+
+Run `cto-legends handoff legends-hetzner` and read the returned installed recipe and task-readiness checks. If the module is missing, preview setup with `cto-legends install legends-hetzner`, perform the authorized setup, then repeat the handoff. Use `cto-legends check-updates` to compare your installed version with the catalog and published release. See [`docs/AGENT-RECIPE.md`](docs/AGENT-RECIPE.md) for the standalone recipe.
+
+The separate official [`hcloud` CLI](https://github.com/hetznercloud/cli) must be installed using its documented Windows, macOS, or Linux instructions. This module never silently installs or upgrades external binaries.
+
+```sh
+python -m pip install -e .
+legends-hetzner doctor
+legends-hetzner resources
+```
+
+</details>
+
+<details>
+<summary><strong>Repository layout, verification, and scope limits</strong></summary>
 
 ```text
-Operator / AI Coding Agent
-  -> legends-hetzner radar (live CX/CAX stock matrix + CTO tier ranking)
+Operator / Coding Agent
+  -> legends-hetzner radar (live CX/CAX stock matrix + REST enrichment + CTO tier ranking)
   -> legends-hetzner server plan (offline JSON plan + SHA-256 content hash)
   -> legends-hetzner server preflight (10 live read-only safety checks)
   -> legends-hetzner server create / snipe (single guarded hcloud invocation + readback receipt)
 ```
 
 - [`legends_hetzner/`](legends_hetzner/__init__.py): Python 3.11+ stdlib CLI entry point, `hcloud` argv adapter (`shell=False`), REST `server_types` enricher, plan hash verifier, and rate-limit-safe radar/sniper engine.
-- [`knowledge/hetzner/`](knowledge/hetzner/pack.json): 16-file source-cited operations library (`cto-sizing-and-sniping.md`, `preflight.md`, `ssh-bootstrap.md`, `coolify-boundary.md`, `backups-restore.md`, `troubleshooting.md`, and audit templates).
+- [`docs/`](docs/AGENT-RECIPE.md): [Agent recipe](docs/AGENT-RECIPE.md), [CTO sizing & sniping guide](docs/CTO-SIZING-AND-SNIPING.md), [Preflight checks](docs/PREFLIGHT.md), [Knowledge pack](docs/KNOWLEDGE-PACK.md), [Live canary](docs/LIVE-CANARY.md), and [Tested scope](docs/VALIDATION.md).
 - [`cloud-init/minimal.yaml`](cloud-init/minimal.yaml): Reviewable Ubuntu 24.04 cloud-init baseline.
 - [`scripts/check_release.py`](scripts/check_release.py): Strict release, contract, link, and privacy fingerprint gate.
 
-## Frequently asked questions
-
-### Does `legends-hetzner` replace the official `hcloud` CLI?
-No. It wraps the official `hcloud` CLI with an agent-safe review procedure: separate local readiness from live API probes, write a SHA-256 hash-pinned server plan, run 10 preflight checks against live provider data, and require explicit `--approve` before executing a single create call.
-
-### Why does `legends-hetzner` prioritize `CX43`, `CX33`, and `CX23` in Germany and Finland?
-Hetzner's `cost_optimized` line (`CX23`-`CX53` x86 and `CAX11`-`CAX41` ARM64 in `fsn1`, `nbg1`, and `hel1`) delivers more than double the RAM and vCPU per dollar compared to `regular_purpose` (`CPX`) plans, and `x86` `CX` servers offer universal `linux/amd64` container compatibility plus in-place rescaling up the `CX23 -> CX33 -> CX43 -> CX53` ladder.
-
-### How does `server snipe` avoid hitting Hetzner Cloud API rate limits?
-`radar --watch` and `server snipe` enforce a strict minimum poll interval of 30 seconds (`--interval 30..3600`, default `60`s) with positive random jitter (`--jitter 0..60`, default `10`s) and bounded `--max-polls` (`1..120`, default `30`). At the default 60-second interval, polling consumes roughly 8% of Hetzner Cloud's 3,600 requests/hour quota, and aborts immediately on Poll 1 if any non-capacity check fails.
-
-### How do existing `cto-legends` users discover and install updates like `v0.1.5`?
-When you or your agent run `cto-legends handoff legends-hetzner` or `cto-legends check-updates`, `cto-legends` compares your local installation against the canonical catalog and upstream GitHub releases. Running `cto-legends sync --apply` followed by `cto-legends update legends-hetzner --apply` upgrades your isolated environment while retaining the previous version for instant rollback.
-
-### How does `legends-hetzner` relate to Coolify and MCP servers?
-`legends-hetzner` owns Hetzner Cloud infrastructure inspection and server provisioning, while companion module [`legends-coolify`](https://github.com/avalonreset/legends-coolify) handles Coolify application inspection and runbooks. Neither module requires an MCP server.
-
-## Development, contributing, and license
-
-Run the test suite and strict release gate locally:
-
-```console
+```sh
 python -m unittest discover -s tests -v
 python scripts/check_release.py --strict
 ```
 
-Contributions and bug reports are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md), [SECURITY.md](SECURITY.md), [SUPPORT.md](SUPPORT.md), [CITATION.cff](CITATION.cff), and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+This is a focused Hetzner Cloud server toolkit, not a wrapper for every Hetzner product. It does not administer Hetzner Robot bare-metal servers, manage billing, modify DNS records (use [`legends-cloudflare`](https://github.com/avalonreset/legends-cloudflare)), inspect Coolify applications (use [`legends-coolify`](https://github.com/avalonreset/legends-coolify)), or replace full Terraform/OpenTofu state reconciliation.
 
-Independent software by Benjamin Samar, released under the [MIT License](LICENSE). Not affiliated with or endorsed by Hetzner Online GmbH.
+</details>
 
----
+## Contributing, security, and license
 
-<p align="center"><a href="https://github.com/stars/avalonreset/lists/cto-legends"><img src="assets/collection-star-shrine.svg" width="100%" alt="GitHub Star List: The complete cto-legends collection on one page. Bookmark or star the router and every module from a single GitHub list."></a></p>
+See [CONTRIBUTING.md](CONTRIBUTING.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md), [SECURITY.md](SECURITY.md), [SUPPORT.md](SUPPORT.md), [PRIVACY.md](PRIVACY.md), [CITATION.cff](CITATION.cff), and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+Independent software by Benjamin Samar (Avalon Reset), released under the [MIT License](LICENSE). Not affiliated with or endorsed by Hetzner Online GmbH.
+
+[![Message Avalon Reset](assets/cards/r1/slot-7-message-avalon-reset.svg)](https://github.com/avalonreset/cto-legends/issues/new?title=Message%20for%20Avalon%20Reset&labels=message)
+
+<p align="center"><a href="https://github.com/stars/avalonreset/lists/cto-legends"><img src="assets/cards/r1/slot-collection-star-shrine.svg" width="100%" alt="GitHub Star List: The complete cto-legends collection on one page. Bookmark or star the router and every module from a single GitHub list."></a></p>
 
 **Specification & benchmarks on cto-legends.com:**
 - **Module specification & architecture matrix:** [cto-legends.com/modules/legends-hetzner](https://cto-legends.com/modules/legends-hetzner)

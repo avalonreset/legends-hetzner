@@ -22,6 +22,7 @@ class BuildWithResources(build_py):
                         ".yaml",
                         ".png",
                         ".webp",
+                        ".svg",
                     ):
                         dest = target / path.relative_to(root)
                         dest.parent.mkdir(parents=True, exist_ok=True)
