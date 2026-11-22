@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.7 - 2026-11-22
+
+- Sync vendored `cto-legends` router skill pin (`69ddc4f68faa`), enforce LF line endings via `.gitattributes`, and standardize release artifact checksums.
+
 ## 0.1.6 - 2026-11-21
 
 - Add `scripts/render_cards.py` and outlined Legends Font `r1` SVG design cards under `assets/cards/r1/` (`slot-1-agent-handoff.svg`, `slot-2-three-pillars.svg`, `slot-3-plain-english-chains.svg`, `slot-4-hetzner-architecture.svg`, `slot-5-adhoc-vs-hetzner.svg`, `slot-7-message-avalon-reset.svg`, `slot-collection-star-shrine.svg`), removing duplicate root `assets/collection-star-shrine.svg`.

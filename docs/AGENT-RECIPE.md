@@ -1,6 +1,6 @@
 # `legends-hetzner` agent recipe (canonical)
 
-Module `legends-hetzner` v0.1.6. Agent-operated Hetzner Cloud workflows that
+Module `legends-hetzner` v0.1.7. Agent-operated Hetzner Cloud workflows that
 wrap the official `hcloud` CLI with reviewed plans, read-only preflight,
 Cost-Optimized stock radar and rate-limit-safe sniping, and a source-cited
 reference library.
@@ -13,7 +13,7 @@ Read first, in order:
 
 1. `docs/CLI-CONTRACT.json` (exact CLI syntax, source of truth)
 2. `docs/CTO-SIZING-AND-SNIPING.md` (Fractional CTO hardware selection, x86 vs ARM64, tier ladder, rescale rules, and rate-limit-safe sniping)
-3. `docs/LIMITATIONS.md` (what v0.1.6 does not do)
+3. `docs/LIMITATIONS.md` (what v0.1.7 does not do)
 4. `docs/SOURCES.md` (source ledger with dates and URLs)
 5. The runbook for the task at hand (list below)
 
