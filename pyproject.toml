@@ -21,6 +21,8 @@ classifiers = [
 legends-hetzner = "legends_hetzner.cli:main"
 
 [project.urls]
+Homepage = "https://cto-legends.com/modules/legends-hetzner"
+Documentation = "https://cto-legends.com/modules/legends-hetzner"
 Repository = "https://github.com/avalonreset/legends-hetzner"
 Issues = "https://github.com/avalonreset/legends-hetzner/issues"
 
